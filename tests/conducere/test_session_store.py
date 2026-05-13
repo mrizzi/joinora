@@ -223,6 +223,24 @@ class TestAgentStateCallback:
         assert states[0] == (session.id, AgentState.LISTENING)
 
     @pytest.mark.asyncio
+    async def test_callback_exception_does_not_abort_wait(self, store):
+        session, _ = store.create_session(title="Test")
+
+        async def failing_callback(sid, state):
+            raise RuntimeError("callback failure")
+
+        store.on_agent_state_change = failing_callback
+
+        async def post_soon():
+            await asyncio.sleep(0.05)
+            store.add_message(session.id, "alice", "Hi")
+
+        asyncio.create_task(post_soon())
+        messages = await store.wait_for_activity(session.id, timeout=2.0)
+        assert len(messages) >= 1
+        assert messages[0].text == "Hi"
+
+    @pytest.mark.asyncio
     async def test_callback_called_with_processing_on_message(self, store):
         session, _ = store.create_session(title="Test")
         states = []
@@ -257,6 +275,7 @@ class TestAgentStateCallback:
 
     @pytest.mark.asyncio
     async def test_no_callback_by_default(self, store):
+        assert store.on_agent_state_change is None
         session, _ = store.create_session(title="Test")
         await store.wait_for_activity(session.id, timeout=0.1)
 
