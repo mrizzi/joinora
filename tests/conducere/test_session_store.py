@@ -271,3 +271,23 @@ class TestAgentStateCallback:
         store.on_agent_state_change = on_change
         await store.wait_for_activity(session.id, timeout=0.1)
         assert all(sid == session.id for sid in received_ids)
+
+    @pytest.mark.asyncio
+    async def test_state_transitions_are_ordered(self, store):
+        session, _ = store.create_session(title="Test")
+        states = []
+
+        async def on_change(sid, state):
+            states.append(state)
+
+        store.on_agent_state_change = on_change
+
+        async def post_soon():
+            await asyncio.sleep(0.05)
+            store.add_message(session.id, "alice", "Hi")
+
+        asyncio.create_task(post_soon())
+        await store.wait_for_activity(session.id, timeout=2.0)
+        assert len(states) == 2
+        assert states[0] == "listening"
+        assert states[1] == "processing"
