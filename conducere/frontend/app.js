@@ -42,6 +42,7 @@
     }
 
     var ALLOWED_TYPES = { question: 1, proposal: 1, summary: 1, info: 1, ai: 1, human: 1 };
+    var AGENT_STATES = { agent_listening: "listening", agent_processing: "processing", agent_disconnected: "disconnected" };
 
     var messagesEl = document.getElementById("messages");
     var inputEl = document.getElementById("comment-input");
@@ -200,10 +201,8 @@
                     badge.textContent = data.user;
                     participantsEl.appendChild(badge);
                 }
-            } else if (data.type === "agent_listening" ||
-                       data.type === "agent_processing" ||
-                       data.type === "agent_disconnected") {
-                setAgentState(data.type.replace("agent_", ""));
+            } else if (AGENT_STATES[data.type]) {
+                setAgentState(AGENT_STATES[data.type]);
             }
         };
 
