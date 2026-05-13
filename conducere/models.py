@@ -12,6 +12,12 @@ class SessionStatus(str, Enum):
     COMPLETE = "complete"
 
 
+class AgentState(str, Enum):
+    LISTENING = "listening"
+    PROCESSING = "processing"
+    DISCONNECTED = "disconnected"
+
+
 class Participant(BaseModel):
     name: str = Field(min_length=1, max_length=50, pattern=r"^[\w\- ]+$")
     last_seen: datetime | None = None
