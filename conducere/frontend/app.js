@@ -53,7 +53,7 @@
     var catchupYes = document.getElementById("catchup-yes");
     var catchupDismiss = document.getElementById("catchup-dismiss");
 
-    var currentUser = null;
+    var _currentUser = null;
     var ws = null;
 
     async function init() {
@@ -66,7 +66,7 @@
         }
         var session = await resp.json();
         titleEl.textContent = session.title;
-        currentUser = session.current_user || null;
+        _currentUser = session.current_user || null;
         renderParticipants(session.participants);
 
         var msgResp = await fetch("/api/sessions/" + sessionId + "/messages" + (token ? "?token=" + token : ""));
