@@ -14,7 +14,7 @@ def create_server(
     web_port: int = 24298,
 ) -> FastMCP:
     if repo_path is None:
-        repo_path = Path(tempfile.mkdtemp(prefix="draftcircle-"))
+        repo_path = Path(tempfile.mkdtemp(prefix="conducere-"))
     store = SessionStore(repo_path=repo_path)
     mcp = FastMCP(
         "Conducere",
