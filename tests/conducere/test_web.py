@@ -1,3 +1,6 @@
+import asyncio
+import threading
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -136,3 +139,32 @@ class TestWebSocket:
         with pytest.raises(Exception):
             with client.websocket_connect(f"/ws/sessions/{session.id}") as ws:
                 ws.receive_json()
+
+
+class TestAgentStateWebSocket:
+    def test_agent_listening_broadcast_on_watch(self, client, store):
+        session, tokens = store.create_session(
+            title="Test", participant_names=["alice"]
+        )
+        token = tokens["alice"]
+
+        async def trigger_watch():
+            await asyncio.sleep(0.05)
+            await store.wait_for_activity(session.id, timeout=0.1)
+
+        with client.websocket_connect(
+            f"/ws/sessions/{session.id}?token={token}"
+        ) as ws:
+            ws.receive_json()  # participant_joined
+
+            loop = asyncio.new_event_loop()
+            t = threading.Thread(
+                target=loop.run_until_complete, args=(trigger_watch(),)
+            )
+            t.start()
+            t.join(timeout=5.0)
+
+            data = ws.receive_json()
+            assert data["type"] == "agent_listening"
+            data2 = ws.receive_json()
+            assert data2["type"] == "agent_disconnected"

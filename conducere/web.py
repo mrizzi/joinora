@@ -22,6 +22,11 @@ def create_web_app(store: SessionStore) -> FastAPI:
     app.state.ws_manager = ws_manager
     app.state.store = store
 
+    async def _notify_agent_state(session_id: str, state: str) -> None:
+        await ws_manager.broadcast(session_id, {"type": f"agent_{state}"})
+
+    store.on_agent_state_change = _notify_agent_state
+
     csp = (
         "default-src 'self'; "
         "script-src 'self' cdn.jsdelivr.net; "
