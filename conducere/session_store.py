@@ -2,6 +2,7 @@ import asyncio
 import json
 import secrets
 import threading
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,6 +19,7 @@ class SessionStore:
         self._loops: dict[str, asyncio.AbstractEventLoop] = {}
         self._pending: dict[str, list[Message]] = {}
         self._lock = threading.Lock()
+        self.on_agent_state_change: Callable[[str, str], Awaitable[None]] | None = None
 
     def _session_dir(self, session_id: str) -> str:
         return f"sessions/{session_id}"
@@ -170,6 +172,9 @@ class SessionStore:
             self._loops[session_id] = loop
             self._pending[session_id] = []
 
+        if self.on_agent_state_change:
+            await self.on_agent_state_change(session_id, "listening")
+
         try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
         except asyncio.TimeoutError:
@@ -180,4 +185,9 @@ class SessionStore:
             self._pending[session_id] = []
             self._events.pop(session_id, None)
             self._loops.pop(session_id, None)
+
+        if self.on_agent_state_change:
+            state = "processing" if messages else "disconnected"
+            await self.on_agent_state_change(session_id, state)
+
         return messages
