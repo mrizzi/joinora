@@ -152,9 +152,7 @@ class TestAgentStateWebSocket:
             await asyncio.sleep(0.05)
             await store.wait_for_activity(session.id, timeout=0.1)
 
-        with client.websocket_connect(
-            f"/ws/sessions/{session.id}?token={token}"
-        ) as ws:
+        with client.websocket_connect(f"/ws/sessions/{session.id}?token={token}") as ws:
             ws.receive_json()  # participant_joined
 
             loop = asyncio.new_event_loop()
