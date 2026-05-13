@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from conducere.git_store import GitStore
-from conducere.models import Message, Participant, Session, SessionStatus
+from conducere.models import AgentState, Message, Participant, Session, SessionStatus
 
 
 class SessionStore:
@@ -19,7 +19,9 @@ class SessionStore:
         self._loops: dict[str, asyncio.AbstractEventLoop] = {}
         self._pending: dict[str, list[Message]] = {}
         self._lock = threading.Lock()
-        self.on_agent_state_change: Callable[[str, str], Awaitable[None]] | None = None
+        self.on_agent_state_change: (
+            Callable[[str, AgentState], Awaitable[None]] | None
+        ) = None
 
     def _session_dir(self, session_id: str) -> str:
         return f"sessions/{session_id}"
@@ -173,7 +175,7 @@ class SessionStore:
             self._pending[session_id] = []
 
         if self.on_agent_state_change:
-            await self.on_agent_state_change(session_id, "listening")
+            await self.on_agent_state_change(session_id, AgentState.LISTENING)
 
         try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
@@ -187,7 +189,7 @@ class SessionStore:
             self._loops.pop(session_id, None)
 
         if self.on_agent_state_change:
-            state = "processing" if messages else "disconnected"
+            state = AgentState.PROCESSING if messages else AgentState.DISCONNECTED
             await self.on_agent_state_change(session_id, state)
 
         return messages

@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from conducere.models import AgentState
 from conducere.ws_manager import WebSocketManager
 from conducere.session_store import SessionStore
 
@@ -22,8 +23,8 @@ def create_web_app(store: SessionStore) -> FastAPI:
     app.state.ws_manager = ws_manager
     app.state.store = store
 
-    async def _notify_agent_state(session_id: str, state: str) -> None:
-        await ws_manager.broadcast(session_id, {"type": f"agent_{state}"})
+    async def _notify_agent_state(session_id: str, state: AgentState) -> None:
+        await ws_manager.broadcast(session_id, {"type": f"agent_{state.value}"})
 
     store.on_agent_state_change = _notify_agent_state
 
