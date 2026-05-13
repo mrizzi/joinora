@@ -154,3 +154,56 @@ header h1 { font-size: 1.2rem; color: #fff; }
 }
 
 #send-btn:hover { background: #3a5ce7; }
+
+/* Agent status dot */
+.agent-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    transition: background 0.3s, box-shadow 0.3s;
+}
+
+.agent-dot.disconnected {
+    background: #666;
+}
+
+.agent-dot.listening {
+    background: #a78bfa;
+    box-shadow: 0 0 6px #a78bfa88;
+    animation: agent-pulse 2s ease-in-out infinite;
+}
+
+.agent-dot.processing {
+    background: #a78bfa;
+    box-shadow: 0 0 6px #a78bfa88;
+}
+
+@keyframes agent-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Typing indicator */
+#agent-typing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    color: #a78bfa;
+    font-size: 13px;
+}
+
+#agent-typing .bar {
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+    background: #a78bfa;
+    animation: bar-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes bar-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
