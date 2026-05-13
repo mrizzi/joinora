@@ -52,6 +52,7 @@
     var catchupText = document.getElementById("catchup-text");
     var catchupYes = document.getElementById("catchup-yes");
     var catchupDismiss = document.getElementById("catchup-dismiss");
+    var agentDot = document.getElementById("agent-dot");
 
     var ws = null;
 
@@ -140,6 +141,39 @@
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    function isNearBottom() {
+        var threshold = 100;
+        return messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < threshold;
+    }
+
+    function setAgentState(state) {
+        agentDot.className = "agent-dot " + state;
+        if (state === "processing") {
+            showTypingIndicator();
+        } else {
+            removeTypingIndicator();
+        }
+    }
+
+    function showTypingIndicator() {
+        if (document.getElementById("agent-typing")) return;
+        var el = document.createElement("div");
+        el.id = "agent-typing";
+        var bar = document.createElement("div");
+        bar.className = "bar";
+        el.appendChild(bar);
+        var label = document.createElement("span");
+        label.textContent = "thinking…";
+        el.appendChild(label);
+        messagesEl.appendChild(el);
+        if (isNearBottom()) scrollToBottom();
+    }
+
+    function removeTypingIndicator() {
+        var el = document.getElementById("agent-typing");
+        if (el) el.remove();
+    }
+
     function formatTime(ts) {
         return new Date(ts).toLocaleTimeString();
     }
@@ -153,6 +187,7 @@
         ws.onmessage = function (event) {
             var data = JSON.parse(event.data);
             if (data.type === "message_added") {
+                removeTypingIndicator();
                 renderMessage(data.message);
                 scrollToBottom();
             } else if (data.type === "participant_joined") {
@@ -165,6 +200,10 @@
                     badge.textContent = data.user;
                     participantsEl.appendChild(badge);
                 }
+            } else if (data.type === "agent_listening" ||
+                       data.type === "agent_processing" ||
+                       data.type === "agent_disconnected") {
+                setAgentState(data.type.replace("agent_", ""));
             }
         };
 
