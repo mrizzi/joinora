@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conducere</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js" integrity="sha384-H+hy9ULve6xfxRkWIh/YOtvDdpXgV2fmAGQkIDTxIgZwNoaoBal14Di2YTMR6MzR" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div id="app">
+        <header id="header">
+            <h1 id="session-title">Conducere</h1>
+            <div id="participants"></div>
+        </header>
+        <div id="catchup-banner" class="hidden">
+            <span id="catchup-text"></span>
+            <button id="catchup-yes">Show summary</button>
+            <button id="catchup-dismiss">Dismiss</button>
+        </div>
+        <main id="messages"></main>
+        <footer id="input-area">
+            <textarea id="comment-input" placeholder="Type your message..." rows="2"></textarea>
+            <button id="send-btn">Send</button>
+        </footer>
+    </div>
+    <script src="/app.js"></script>
+</body>
+</html>
