@@ -1,0 +1,247 @@
+# Conducere
+
+Collaborative multi-user runtime for structured prompt/skill execution.
+
+**The skill controls the agenda; participants control the content.**
+
+Conducere lets any coding agent (Claude Code, Cursor, Windsurf, etc.) run a skill collaboratively with multiple human participants. The agent drives the session through MCP tools while participants contribute via a shared browser-based conversation thread with real-time sync.
+
+**BYOS — Bring Your Own Skill.** Any existing skill works without modification. Conducere wraps it with interaction rules that route I/O through a shared session.
+
+---
+
+## How It Works
+
+```
+                    ┌──────────────────────┐
+                    │     Coding Agent     │
+                    │  (Claude Code, etc.) │
+                    └──────────┬───────────┘
+                               │ MCP Tools
+                    ┌──────────▼───────────┐
+                    │      Conducere       │
+                    │   ┌───────────────┐  │
+                    │   │  MCP Server   │  │
+                    │   │   (FastMCP)   │  │
+                    │   └───────┬───────┘  │
+                    │           │           │
+                    │   ┌───────▼───────┐  │
+                    │   │ Session Store │  │
+                    │   │ (memory+git)  │  │
+                    │   └───────┬───────┘  │
+                    │           │           │
+                    │   ┌───────▼───────┐  │
+                    │   │  Web Server   │  │
+                    │   │   (FastAPI)   │  │
+                    │   └───────┬───────┘  │
+                    └───────────┼───────────┘
+                      WebSocket │ + REST
+               ┌────────────────┼────────────────┐
+               ▼                ▼                ▼
+          ┌─────────┐     ┌─────────┐      ┌─────────┐
+          │  Alice   │     │   Bob   │      │  Carol  │
+          │ (browser)│     │(browser)│      │(browser)│
+          └─────────┘     └─────────┘      └─────────┘
+```
+
+A single process runs two interfaces sharing state:
+
+- **MCP Server** (FastMCP, Streamable HTTP) — the agent connects here and uses 6 tools to drive the session.
+- **Web UI Server** (FastAPI, daemon thread) — participants connect via browser with WebSocket for real-time sync.
+- **Session Store** — in-memory cache + git persistence (pygit2). Every mutation is a git commit.
+
+---
+
+## Quick Start
+
+### Installation
+
+```bash
+pip install -e ".[dev]"
+```
+
+Requires Python 3.12+.
+
+### Run the Server
+
+```bash
+conducere --repo-path /path/to/data --web-port 24298
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--repo-path` | temp directory | Git repo for session persistence |
+| `--web-host` | `localhost` | Web server bind address |
+| `--web-port` | `24298` | Web server port |
+| `--transport` | `stdio` | MCP transport: `stdio` or `streamable-http` |
+
+### Local Test
+
+```bash
+python3 test_local.py
+```
+
+Creates a session and starts the web UI for quick experimentation.
+
+---
+
+## MCP Tools
+
+The agent drives sessions through six tools:
+
+| Tool | Type | Description |
+|------|------|-------------|
+| `create_session` | Instant | Create a session with named participants. Returns session URLs and per-participant authentication links. |
+| `post_message` | Instant | Post an AI message to the session. Supports metadata for message typing (`question`, `proposal`, `summary`, `info`) and skill phase tagging. |
+| `watch_session` | Background Task | Long-lived async task that blocks until participants post new messages. Returns the batch of new messages. |
+| `get_session_status` | Instant | Check session status: who's connected, message count, last-seen timestamps. |
+| `get_catchup_summary` | Instant | Retrieve messages since a given timestamp — useful for generating summaries when participants rejoin. |
+| `end_session` | Instant | Mark the session complete. |
+
+### Message Metadata
+
+Messages carry optional metadata for richer rendering and skill semantics:
+
+```python
+metadata = {
+    "type": "question",   # question | proposal | summary | info
+    "section": "ideation", # current phase of the skill
+    "for": "Alice"         # target participant (for directed summaries)
+}
+```
+
+The web UI renders each type with distinct styling — orange borders for questions, green for proposals, purple for summaries, blue for informational messages.
+
+---
+
+## Session Lifecycle
+
+```
+1. Agent calls create_session("Brainstorm features", ["alice", "bob"])
+   → Returns session_id + per-participant URLs with auth tokens
+
+2. Agent shares URLs with participants
+   → Participants open browser, authenticate automatically via token
+   → WebSocket connects for real-time sync
+
+3. Agent posts questions via post_message
+   → Message committed to git, broadcast to all connected browsers
+
+4. Participants respond via browser UI
+   → Messages committed to git, broadcast to agent + other participants
+
+5. Agent calls watch_session (background task)
+   → Blocks until participant activity
+   → Returns batch of new messages
+
+6. Agent processes responses, continues the skill
+   → Posts follow-ups, proposals, summaries
+
+7. Agent calls end_session
+   → Session marked complete, final state persisted in git
+```
+
+---
+
+## Adapter Skill
+
+The `/conducere` adapter skill wraps any target skill for multi-user execution. It injects interaction rules that:
+
+- Route all user communication through Conducere MCP tools (`post_message`, `watch_session`)
+- Tag messages with metadata (`type`, `section`) for structured rendering
+- Process all participant messages before responding
+- Synthesize multi-participant input into coherent responses
+- Support `/catchup` commands for participants who join late
+
+The adapter is a template — the target skill's content is injected at runtime via a `{target_skill_content}` placeholder.
+
+Located in `skill/skills/conducere/SKILL.md`.
+
+---
+
+## Web UI
+
+The frontend is vanilla HTML/CSS/JS with no build step:
+
+- Dark theme conversation thread
+- Real-time message sync via WebSocket (auto-reconnect)
+- Markdown rendering via marked.js (XSS-safe)
+- Message type styling (question, proposal, summary, info)
+- Participant presence indicators
+- Catchup banner for returning participants
+- Enter to send, Shift+Enter for newlines
+- Read-only mode for unauthenticated viewers
+
+---
+
+## Architecture Details
+
+### Security
+
+- **Token isolation**: Authentication tokens are held in-memory only — never serialized to git or API responses.
+- **XSS prevention**: Frontend uses `textContent` for user data, marked.js with a safe renderer that escapes HTML, and CSP headers.
+- **Path safety**: Git store validates paths to prevent directory traversal.
+- **Auth gate**: Every REST and WebSocket endpoint validates tokens against the session store.
+
+### Persistence
+
+Every session mutation is committed to a git repository:
+
+```
+sessions/{id}/session.json    # Session metadata + participants
+sessions/{id}/messages.json   # Full message history
+```
+
+The in-memory store acts as a cache; the git repo is the source of truth.
+
+### Concurrency
+
+- `threading.Lock` for thread-safe session mutations
+- `asyncio.Event` for async notification between the web server thread and MCP task coroutines
+- Deep-copy semantics on `get_session` to prevent mutation leaks
+
+---
+
+## Development
+
+```bash
+# Install with dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest tests/
+
+# Format
+ruff format .
+
+# Lint
+ruff check .
+```
+
+### Project Structure
+
+```
+conducere/
+  models.py           # Pydantic models: Session, Message, Participant
+  session_store.py    # Git-backed store with async subscriber notification
+  tools.py            # MCP tool functions
+  server.py           # FastMCP server, CLI entry point
+  web.py              # FastAPI web app (REST + WebSocket)
+  git_store.py        # pygit2 wrapper
+  ws_manager.py       # WebSocket connection manager
+  frontend/           # Vanilla HTML/CSS/JS conversation thread UI
+skill/
+  skills/conducere/   # /conducere adapter skill (BYOS wrapper)
+tests/conducere/      # Tests
+```
+
+### Tech Stack
+
+| Component | Choice |
+|-----------|--------|
+| Language | Python 3.12+ |
+| MCP framework | FastMCP |
+| Web framework | FastAPI |
+| Git operations | pygit2 |
+| Frontend | Vanilla HTML/CSS/JS |
+| Markdown | marked.js |
