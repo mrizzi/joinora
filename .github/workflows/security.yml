@@ -26,7 +26,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e .
-          pip install pip-audit bandit
+          pip install "pip-audit~=2.10" "bandit~=1.9"
 
       - name: Audit dependencies
         run: pip-audit --skip-editable
