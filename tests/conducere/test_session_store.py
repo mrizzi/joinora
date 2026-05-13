@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from conducere.models import SessionStatus
+from conducere.models import AgentState, SessionStatus
 from conducere.session_store import SessionStore
 
 
@@ -220,7 +220,7 @@ class TestAgentStateCallback:
 
         asyncio.create_task(post_soon())
         await store.wait_for_activity(session.id, timeout=2.0)
-        assert ("listening", session.id) == (states[0][1], states[0][0])
+        assert states[0] == (session.id, AgentState.LISTENING)
 
     @pytest.mark.asyncio
     async def test_callback_called_with_processing_on_message(self, store):
@@ -239,7 +239,7 @@ class TestAgentStateCallback:
         asyncio.create_task(post_soon())
         await store.wait_for_activity(session.id, timeout=2.0)
         state_names = [s[1] for s in states]
-        assert "processing" in state_names
+        assert AgentState.PROCESSING in state_names
 
     @pytest.mark.asyncio
     async def test_callback_called_with_disconnected_on_timeout(self, store):
@@ -252,8 +252,8 @@ class TestAgentStateCallback:
         store.on_agent_state_change = on_change
         await store.wait_for_activity(session.id, timeout=0.1)
         state_names = [s[1] for s in states]
-        assert "listening" in state_names
-        assert "disconnected" in state_names
+        assert AgentState.LISTENING in state_names
+        assert AgentState.DISCONNECTED in state_names
 
     @pytest.mark.asyncio
     async def test_no_callback_by_default(self, store):
@@ -289,5 +289,5 @@ class TestAgentStateCallback:
         asyncio.create_task(post_soon())
         await store.wait_for_activity(session.id, timeout=2.0)
         assert len(states) == 2
-        assert states[0] == "listening"
-        assert states[1] == "processing"
+        assert states[0] == AgentState.LISTENING
+        assert states[1] == AgentState.PROCESSING

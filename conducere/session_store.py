@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import secrets
 import threading
 from collections.abc import Awaitable, Callable
@@ -8,6 +9,9 @@ from pathlib import Path
 
 from conducere.git_store import GitStore
 from conducere.models import AgentState, Message, Participant, Session, SessionStatus
+
+
+logger = logging.getLogger(__name__)
 
 
 class SessionStore:
@@ -175,7 +179,10 @@ class SessionStore:
             self._pending[session_id] = []
 
         if self.on_agent_state_change:
-            await self.on_agent_state_change(session_id, AgentState.LISTENING)
+            try:
+                await self.on_agent_state_change(session_id, AgentState.LISTENING)
+            except Exception:
+                logger.warning("agent state callback failed", exc_info=True)
 
         try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
@@ -190,6 +197,9 @@ class SessionStore:
 
         if self.on_agent_state_change:
             state = AgentState.PROCESSING if messages else AgentState.DISCONNECTED
-            await self.on_agent_state_change(session_id, state)
+            try:
+                await self.on_agent_state_change(session_id, state)
+            except Exception:
+                logger.warning("agent state callback failed", exc_info=True)
 
         return messages
