@@ -1,0 +1,32 @@
+name: Frontend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install frontend tools
+        run: npm install eslint @eslint/js globals stylelint stylelint-config-standard html-validate
+
+      - name: Validate HTML
+        run: npx html-validate conducere/frontend/index.html
+
+      - name: Lint JavaScript
+        run: npx eslint conducere/frontend/app.js
+
+      - name: Lint CSS
+        run: npx stylelint conducere/frontend/style.css
