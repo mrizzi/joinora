@@ -24,11 +24,12 @@ jobs:
 
       - name: Install project and security tools
         run: |
+          pip install --upgrade pip
           pip install -e .
           pip install pip-audit bandit
 
       - name: Audit dependencies
-        run: pip-audit
+        run: pip-audit --skip-editable
 
       - name: Run bandit
         run: bandit -r conducere/ -c pyproject.toml
