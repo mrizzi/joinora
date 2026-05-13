@@ -166,3 +166,33 @@ class TestAgentStateWebSocket:
             assert data["type"] == "agent_listening"
             data2 = ws.receive_json()
             assert data2["type"] == "agent_disconnected"
+
+    def test_agent_processing_broadcast_on_message(self, client, store):
+        session, tokens = store.create_session(
+            title="Test", participant_names=["alice"]
+        )
+        token = tokens["alice"]
+
+        async def trigger_watch_with_message():
+            async def post_soon():
+                await asyncio.sleep(0.1)
+                store.add_message(session.id, "alice", "Hi")
+
+            asyncio.ensure_future(post_soon())
+            await store.wait_for_activity(session.id, timeout=2.0)
+
+        with client.websocket_connect(f"/ws/sessions/{session.id}?token={token}") as ws:
+            ws.receive_json()  # participant_joined
+
+            loop = asyncio.new_event_loop()
+            t = threading.Thread(
+                target=loop.run_until_complete,
+                args=(trigger_watch_with_message(),),
+            )
+            t.start()
+            t.join(timeout=5.0)
+
+            data = ws.receive_json()
+            assert data["type"] == "agent_listening"
+            data2 = ws.receive_json()
+            assert data2["type"] == "agent_processing"
