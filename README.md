@@ -52,6 +52,42 @@ A single process runs two interfaces sharing state:
 
 ---
 
+## MCP Spec Features
+
+Conducere is built on [FastMCP](https://gofastmcp.com) and exercises two recent additions to the [Model Context Protocol](https://modelcontextprotocol.io) specification that are central to how it works.
+
+### Streamable HTTP Transport
+
+Introduced in the [2025-03-26 spec revision](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), Streamable HTTP replaces the deprecated SSE transport with a single-endpoint design. One URL handles everything: `POST` for client-to-server JSON-RPC messages, `GET` for optional server-initiated SSE streams, and `DELETE` for session teardown.
+
+Conducere supports both `stdio` (for local agent connections) and `streamable-http` (for remote agents). Streamable HTTP matters here because Conducere is a long-lived server managing multiple concurrent sessions — the single-endpoint model works cleanly with standard HTTP infrastructure (load balancers, reverse proxies, firewalls) without the connection-management issues that plagued the old two-endpoint SSE approach.
+
+```bash
+# Local agent (stdio, default)
+conducere --transport stdio
+
+# Remote agent (streamable HTTP)
+conducere --transport streamable-http
+```
+
+### MCP Tasks (Async Background Operations)
+
+Introduced in the [2025-11-25 spec revision](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks) as an experimental feature ([SEP-1686](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/1686)), Tasks upgrade MCP from synchronous tool calls to a call-now, fetch-later protocol. A task-augmented request returns immediately with a durable handle while the real work continues in the background.
+
+This is the mechanism that makes `watch_session` possible. Without Tasks, an MCP tool call blocks the agent until it returns — fine for instant operations, but Conducere needs to wait indefinitely for human participants to respond. `watch_session` is registered as a background task (`task=True` in FastMCP), so the agent can continue other work while the task monitors for participant activity:
+
+```python
+@mcp.tool(task=True)
+async def watch_session(session_id: str) -> dict:
+    """Runs as a background MCP Task — waits for participant activity."""
+    messages = await store.wait_for_activity(session_id, timeout=300.0)
+    return {"messages": [m.to_wire() for m in messages]}
+```
+
+The agent receives the task handle immediately and gets notified when participants post messages, rather than being blocked on a synchronous call.
+
+---
+
 ## Quick Start
 
 ### Installation
