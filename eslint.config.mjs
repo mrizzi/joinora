@@ -13,8 +13,5 @@ export default [
                 marked: "readonly",
             },
         },
-        rules: {
-            "no-unused-vars": ["error", { varsIgnorePattern: "^_" }],
-        },
     },
 ];
