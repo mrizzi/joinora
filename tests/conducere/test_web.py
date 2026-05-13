@@ -36,6 +36,19 @@ class TestSessionAPI:
         assert resp.json()["title"] == "Test"
         assert resp.json()["current_user"] == "alice"
 
+    def test_current_user_reflects_caller(self, client, store):
+        session, tokens = store.create_session(
+            title="Test", participant_names=["alice", "bob"]
+        )
+        resp_alice = client.get(
+            f"/api/sessions/{session.id}", params={"token": tokens["alice"]}
+        )
+        resp_bob = client.get(
+            f"/api/sessions/{session.id}", params={"token": tokens["bob"]}
+        )
+        assert resp_alice.json()["current_user"] == "alice"
+        assert resp_bob.json()["current_user"] == "bob"
+
 
 class TestMessageAPI:
     def test_post_message(self, client, store):

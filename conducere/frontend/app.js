@@ -56,6 +56,7 @@
     var agentDot = document.getElementById("agent-dot");
 
     var ws = null;
+    var currentUser = null;
 
     async function init() {
         var resp = await fetch(
@@ -66,6 +67,7 @@
             return;
         }
         var session = await resp.json();
+        currentUser = session.current_user || null;
         titleEl.textContent = session.title;
         renderParticipants(session.participants);
 
@@ -96,11 +98,18 @@
         }
     }
 
+    function badgeClass(name, extra) {
+        var cls = "participant-badge";
+        if (extra) cls += " " + extra;
+        if (name === currentUser) cls += " current-user";
+        return cls;
+    }
+
     function renderParticipants(participants) {
         participantsEl.textContent = "";
         participants.forEach(function (p) {
             var badge = document.createElement("span");
-            badge.className = "participant-badge";
+            badge.className = badgeClass(p.name);
             badge.textContent = p.name;
             participantsEl.appendChild(badge);
         });
@@ -197,7 +206,7 @@
                 );
                 if (!existing) {
                     var badge = document.createElement("span");
-                    badge.className = "participant-badge online";
+                    badge.className = badgeClass(data.user, "online");
                     badge.textContent = data.user;
                     participantsEl.appendChild(badge);
                 }
