@@ -201,3 +201,73 @@ class TestUpdateLastSeen:
         store.update_last_seen(session.id, "alice", now)
         updated = store.get_session(session.id)
         assert updated.participants[0].last_seen == now
+
+
+class TestAgentStateCallback:
+    @pytest.mark.asyncio
+    async def test_callback_called_with_listening_on_entry(self, store):
+        session, _ = store.create_session(title="Test")
+        states = []
+
+        async def on_change(sid, state):
+            states.append((sid, state))
+
+        store.on_agent_state_change = on_change
+
+        async def post_soon():
+            await asyncio.sleep(0.05)
+            store.add_message(session.id, "alice", "Hi")
+
+        asyncio.create_task(post_soon())
+        await store.wait_for_activity(session.id, timeout=2.0)
+        assert ("listening", session.id) == (states[0][1], states[0][0])
+
+    @pytest.mark.asyncio
+    async def test_callback_called_with_processing_on_message(self, store):
+        session, _ = store.create_session(title="Test")
+        states = []
+
+        async def on_change(sid, state):
+            states.append((sid, state))
+
+        store.on_agent_state_change = on_change
+
+        async def post_soon():
+            await asyncio.sleep(0.05)
+            store.add_message(session.id, "alice", "Hi")
+
+        asyncio.create_task(post_soon())
+        await store.wait_for_activity(session.id, timeout=2.0)
+        state_names = [s[1] for s in states]
+        assert "processing" in state_names
+
+    @pytest.mark.asyncio
+    async def test_callback_called_with_disconnected_on_timeout(self, store):
+        session, _ = store.create_session(title="Test")
+        states = []
+
+        async def on_change(sid, state):
+            states.append((sid, state))
+
+        store.on_agent_state_change = on_change
+        await store.wait_for_activity(session.id, timeout=0.1)
+        state_names = [s[1] for s in states]
+        assert "listening" in state_names
+        assert "disconnected" in state_names
+
+    @pytest.mark.asyncio
+    async def test_no_callback_by_default(self, store):
+        session, _ = store.create_session(title="Test")
+        await store.wait_for_activity(session.id, timeout=0.1)
+
+    @pytest.mark.asyncio
+    async def test_callback_receives_correct_session_id(self, store):
+        session, _ = store.create_session(title="Test")
+        received_ids = []
+
+        async def on_change(sid, state):
+            received_ids.append(sid)
+
+        store.on_agent_state_change = on_change
+        await store.wait_for_activity(session.id, timeout=0.1)
+        assert all(sid == session.id for sid in received_ids)
