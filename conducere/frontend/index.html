@@ -9,6 +9,17 @@
 </head>
 <body>
     <div id="app">
+        <div id="join-overlay" class="hidden">
+            <div class="join-card">
+                <h2 id="join-title"></h2>
+                <p id="join-ended" class="hidden">This session has ended.</p>
+                <form id="join-form">
+                    <input type="text" id="join-name" placeholder="Your name" maxlength="50" required autocomplete="off">
+                    <div id="join-error" class="hidden"></div>
+                    <button type="submit" id="join-btn">Join</button>
+                </form>
+            </div>
+        </div>
         <header id="header">
             <div class="header-title">
                 <span id="agent-dot" class="agent-dot disconnected"></span>
