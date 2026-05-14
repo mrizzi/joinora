@@ -80,9 +80,6 @@ class SessionStore:
         return session.model_copy(deep=True), tokens
 
     def add_participant(self, session_id: str, name: str) -> str:
-        if name == "ai":
-            raise ValueError(f"Name '{name}' is reserved")
-
         participant = Participant(name=name)
         with self._lock:
             session = self._sessions.get(session_id)
@@ -105,9 +102,7 @@ class SessionStore:
             f"join: {name} in {session_id}",
             {
                 f"{base}/session.json": session.model_dump_json(indent=2),
-                f"{base}/tokens.json": json.dumps(
-                    self._tokens[session_id], indent=2
-                ),
+                f"{base}/tokens.json": json.dumps(self._tokens[session_id], indent=2),
             },
         )
         with self._lock:
