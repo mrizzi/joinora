@@ -46,6 +46,9 @@ skill's logic.
   `"participant_joined"` types. Process all events in order.
 - Use `get_session_status` to check who's active. Returns
   participant URLs with tokens for re-sharing.
+- If a participant sends `/catchup`, use `get_catchup_summary`
+  and post the result with
+  `metadata: {"type": "summary", "for": "<participant_name>"}`.
 
 **Session management:**
 
