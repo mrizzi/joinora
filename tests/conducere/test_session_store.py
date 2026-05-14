@@ -437,3 +437,48 @@ class TestStartupLoading:
         store2 = SessionStore(repo_path=tmp_path)
         loaded = store2.get_session(session.id)
         assert loaded.status == SessionStatus.COMPLETE
+
+
+class TestListAllSessions:
+    def test_returns_all_sessions(self, store):
+        s1 = store.create_session(title="First")
+        s2 = store.create_session(title="Second")
+        sessions = store.list_all_sessions()
+        ids = {s.id for s in sessions}
+        assert s1.id in ids
+        assert s2.id in ids
+
+    def test_returns_empty_when_none(self, store):
+        assert store.list_all_sessions() == []
+
+    def test_returns_copies(self, store):
+        store.create_session(title="Test")
+        sessions = store.list_all_sessions()
+        sessions[0].title = "Mutated"
+        fresh = store.list_all_sessions()
+        assert fresh[0].title == "Test"
+
+
+class TestReopenSession:
+    def test_reopen_completed_session(self, store):
+        session = store.create_session(title="Test")
+        store.end_session(session.id)
+        store.reopen_session(session.id)
+        updated = store.get_session(session.id)
+        assert updated.status == SessionStatus.ACTIVE
+
+    def test_reopen_active_session_raises(self, store):
+        session = store.create_session(title="Test")
+        with pytest.raises(ValueError, match="not complete"):
+            store.reopen_session(session.id)
+
+    def test_reopen_nonexistent_raises(self, store):
+        with pytest.raises(ValueError, match="not found"):
+            store.reopen_session("no-such-id")
+
+    def test_reopen_persists_to_git(self, store):
+        session = store.create_session(title="Test")
+        store.end_session(session.id)
+        store.reopen_session(session.id)
+        content = store._git.read_file(f"sessions/{session.id}/session.json")
+        assert '"active"' in content

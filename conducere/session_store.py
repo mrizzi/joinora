@@ -127,6 +127,10 @@ class SessionStore:
                 return None
             return session.model_copy(deep=True)
 
+    def list_all_sessions(self) -> list[Session]:
+        with self._lock:
+            return [s.model_copy(deep=True) for s in self._sessions.values()]
+
     def authenticate(self, session_id: str, token: str) -> str | None:
         with self._lock:
             session_tokens = self._tokens.get(session_id, {})
@@ -199,6 +203,16 @@ class SessionStore:
             "message_count": len(session.messages),
             "participants": [p.name for p in session.participants],
         }
+
+    def reopen_session(self, session_id: str) -> None:
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise ValueError(f"Session '{session_id}' not found")
+            if session.status != SessionStatus.COMPLETE:
+                raise ValueError(f"Session '{session_id}' is not complete")
+            session.status = SessionStatus.ACTIVE
+        self._save_session(session, f"reopen: session {session_id}")
 
     def update_last_seen(
         self,

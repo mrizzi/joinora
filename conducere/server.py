@@ -94,6 +94,21 @@ def create_server(
 
         return await _end(store=store, session_id=session_id)
 
+    @mcp.tool()
+    async def list_sessions() -> dict:
+        """List all sessions (active and complete) with participant URLs.
+        Use to discover existing sessions after agent reconnection."""
+        from conducere.tools import list_sessions as _list
+
+        return await _list(store=store, host=web_host, port=web_port)
+
+    @mcp.tool()
+    async def reopen_session(session_id: str) -> dict:
+        """Reopen a completed session, changing its status back to active."""
+        from conducere.tools import reopen_session as _reopen
+
+        return await _reopen(store=store, session_id=session_id)
+
     mcp._store = store
     mcp._web_host = web_host
     mcp._web_port = web_port
