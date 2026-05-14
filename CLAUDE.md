@@ -110,4 +110,6 @@ python3 test_local.py
   (textContent for user data, marked.js with safe renderer for
   markdown).
 - Git commit messages: imperative mood, concise.
-- Tokens never serialized to git or API responses.
+- Tokens persisted to git (`tokens.json`) for restart recovery.
+  Never included in API responses except the join endpoint's
+  response to the joining participant.
