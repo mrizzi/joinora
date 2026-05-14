@@ -8,7 +8,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from conducere.git_store import GitStore
-from conducere.models import AgentState, Message, Participant, Session, SessionStatus
+from conducere.models import (
+    AgentState,
+    Message,
+    MessageEvent,
+    Participant,
+    ParticipantJoinedEvent,
+    Session,
+    SessionEvent,
+    SessionStatus,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -21,7 +30,7 @@ class SessionStore:
         self._tokens: dict[str, dict[str, str]] = {}
         self._events: dict[str, asyncio.Event] = {}
         self._loops: dict[str, asyncio.AbstractEventLoop] = {}
-        self._pending: dict[str, list[dict]] = {}
+        self._pending: dict[str, list[SessionEvent]] = {}
         self._lock = threading.Lock()
         self.on_agent_state_change: (
             Callable[[str, AgentState], Awaitable[None]] | None
@@ -102,7 +111,7 @@ class SessionStore:
             session.participants.append(participant)
             self._tokens.setdefault(session_id, {})[name] = token
             self._pending.setdefault(session_id, []).append(
-                {"type": "participant_joined", "participant": {"name": name}}
+                ParticipantJoinedEvent(name=name)
             )
 
         base = self._session_dir(session_id)
@@ -167,7 +176,7 @@ class SessionStore:
             )
             session.messages.append(message)
             self._pending.setdefault(session_id, []).append(
-                {"type": "message", "message": message}
+                MessageEvent(message=message)
             )
 
         self._save_messages(session, f"message: {author} in {session_id}")
@@ -231,7 +240,7 @@ class SessionStore:
 
     async def wait_for_activity(
         self, session_id: str, timeout: float = 300.0
-    ) -> list[dict]:
+    ) -> list[SessionEvent]:
         event = asyncio.Event()
         loop = asyncio.get_running_loop()
         with self._lock:

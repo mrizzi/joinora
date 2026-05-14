@@ -1,7 +1,9 @@
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from typing import Annotated
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AfterValidator, BaseModel, Field
 
 AI_AUTHOR = "ai"
 RESERVED_NAMES = frozenset({"ai", "system", "admin"})
@@ -18,16 +20,22 @@ class AgentState(str, Enum):
     DISCONNECTED = "disconnected"
 
 
-class Participant(BaseModel):
-    name: str = Field(min_length=1, max_length=50, pattern=r"^[\w\- ]+$")
-    last_seen: datetime | None = None
+def _check_not_reserved(v: str) -> str:
+    if v.lower() in RESERVED_NAMES:
+        raise ValueError(f"Participant name '{v}' is reserved")
+    return v
 
-    @field_validator("name")
-    @classmethod
-    def name_not_reserved(cls, v: str) -> str:
-        if v.lower() in RESERVED_NAMES:
-            raise ValueError(f"Participant name '{v}' is reserved")
-        return v
+
+ParticipantName = Annotated[
+    str,
+    Field(min_length=1, max_length=50, pattern=r"^[\w\- ]+$"),
+    AfterValidator(_check_not_reserved),
+]
+
+
+class Participant(BaseModel):
+    name: ParticipantName
+    last_seen: datetime | None = None
 
 
 class Message(BaseModel):
@@ -54,3 +62,16 @@ class Session(BaseModel):
     participants: list[Participant] = Field(default_factory=list)
     messages: list[Message] = Field(default_factory=list)
     created_at: datetime
+
+
+@dataclass
+class MessageEvent:
+    message: Message
+
+
+@dataclass
+class ParticipantJoinedEvent:
+    name: str
+
+
+SessionEvent = MessageEvent | ParticipantJoinedEvent
