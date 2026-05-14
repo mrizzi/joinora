@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastmcp import FastMCP
 
+from conducere.models import MessageEvent, ParticipantJoinedEvent
 from conducere.session_store import SessionStore
 
 
@@ -71,12 +72,17 @@ def create_server(
         events = await store.wait_for_activity(session_id, timeout=300.0)
         wire_events = []
         for evt in events:
-            if evt["type"] == "message":
+            if isinstance(evt, MessageEvent):
                 wire_events.append(
-                    {"type": "message", "message": evt["message"].to_wire()}
+                    {"type": "message", "message": evt.message.to_wire()}
                 )
-            else:
-                wire_events.append(evt)
+            elif isinstance(evt, ParticipantJoinedEvent):
+                wire_events.append(
+                    {
+                        "type": "participant_joined",
+                        "participant": {"name": evt.name},
+                    }
+                )
         return {"events": wire_events}
 
     @mcp.tool()

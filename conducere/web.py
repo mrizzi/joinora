@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from conducere.models import AgentState
+from conducere.models import AgentState, ParticipantName
 from conducere.ws_manager import WebSocketManager
 from conducere.session_store import SessionStore
 
@@ -18,7 +18,7 @@ class PostMessageRequest(BaseModel):
 
 
 class JoinRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=50, pattern=r"^[\w\- ]+$")
+    name: ParticipantName
 
 
 def create_web_app(store: SessionStore) -> FastAPI:
@@ -71,18 +71,26 @@ def create_web_app(store: SessionStore) -> FastAPI:
                 "participant_count": len(session.participants),
             }
 
-        data = session.model_dump(mode="json")
-        data["current_user"] = user
         participant = next((p for p in session.participants if p.name == user), None)
-        data["last_seen"] = (
-            participant.last_seen.isoformat()
-            if participant and participant.last_seen
-            else None
-        )
-        for p in data.get("participants", []):
-            p.pop("token", None)
-        data.pop("messages", None)
-        return data
+        return {
+            "id": session.id,
+            "title": session.title,
+            "status": session.status.value,
+            "created_at": session.created_at.isoformat(),
+            "current_user": user,
+            "last_seen": (
+                participant.last_seen.isoformat()
+                if participant and participant.last_seen
+                else None
+            ),
+            "participants": [
+                {
+                    "name": p.name,
+                    "last_seen": (p.last_seen.isoformat() if p.last_seen else None),
+                }
+                for p in session.participants
+            ],
+        }
 
     @app.get("/api/sessions/{session_id}/messages")
     def get_messages(

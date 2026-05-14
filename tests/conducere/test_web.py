@@ -251,13 +251,13 @@ class TestJoinAPI:
         )
         assert resp.status_code == 409
 
-    def test_join_reserved_name_returns_400(self, client, store):
+    def test_join_reserved_name_returns_422(self, client, store):
         session = store.create_session(title="Test")
         resp = client.post(
             f"/api/sessions/{session.id}/join",
             json={"name": "ai"},
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
     def test_join_empty_name_returns_422(self, client, store):
         session = store.create_session(title="Test")

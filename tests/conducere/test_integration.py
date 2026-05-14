@@ -3,6 +3,7 @@ import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
+from conducere.models import MessageEvent
 from conducere.server import create_server
 from conducere.web import create_web_app
 
@@ -83,9 +84,9 @@ class TestFullFlow:
 
         events = await store.wait_for_activity(session_id, timeout=2.0)
         assert len(events) >= 1
-        assert events[0]["type"] == "message"
-        assert events[0]["message"].author == "alice"
-        assert events[0]["message"].text == "My answer"
+        assert isinstance(events[0], MessageEvent)
+        assert events[0].message.author == "alice"
+        assert events[0].message.text == "My answer"
 
     @pytest.mark.asyncio
     async def test_session_lifecycle(self, setup):

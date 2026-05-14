@@ -3,7 +3,12 @@ from datetime import datetime, timezone
 
 import pytest
 
-from conducere.models import AgentState, SessionStatus
+from conducere.models import (
+    AgentState,
+    MessageEvent,
+    ParticipantJoinedEvent,
+    SessionStatus,
+)
 from conducere.session_store import SessionStore
 
 
@@ -243,8 +248,8 @@ class TestSubscriberNotification:
         asyncio.create_task(post_after_delay())
         events = await store.wait_for_activity(session.id, timeout=2.0)
         assert len(events) >= 1
-        assert events[0]["type"] == "message"
-        assert events[0]["message"].author == "alice"
+        assert isinstance(events[0], MessageEvent)
+        assert events[0].message.author == "alice"
 
     @pytest.mark.asyncio
     async def test_wait_for_activity_timeout_returns_empty(self, store):
@@ -264,7 +269,7 @@ class TestSubscriberNotification:
         asyncio.create_task(post_two())
         events = await store.wait_for_activity(session.id, timeout=2.0)
         assert len(events) >= 2
-        assert all(e["type"] == "message" for e in events)
+        assert all(isinstance(e, MessageEvent) for e in events)
 
 
 class TestJoinWakesWatch:
@@ -279,8 +284,8 @@ class TestJoinWakesWatch:
         asyncio.create_task(join_after_delay())
         events = await store.wait_for_activity(session.id, timeout=2.0)
         assert len(events) >= 1
-        assert events[0]["type"] == "participant_joined"
-        assert events[0]["participant"]["name"] == "alice"
+        assert isinstance(events[0], ParticipantJoinedEvent)
+        assert events[0].name == "alice"
 
 
 class TestAgentStateCallback:
@@ -318,7 +323,7 @@ class TestAgentStateCallback:
         asyncio.create_task(post_soon())
         events = await store.wait_for_activity(session.id, timeout=2.0)
         assert len(events) >= 1
-        assert events[0]["message"].text == "Hi"
+        assert events[0].message.text == "Hi"
 
     @pytest.mark.asyncio
     async def test_callback_called_with_processing_on_message(self, store):

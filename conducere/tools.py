@@ -1,10 +1,12 @@
 from datetime import datetime
 
-from conducere.models import AI_AUTHOR
+from conducere.models import AI_AUTHOR, Session
 from conducere.session_store import SessionStore
 
 
-def _session_to_wire(session, tokens: dict[str, str], host: str, port: int) -> dict:
+def _session_to_wire(
+    session: Session, tokens: dict[str, str], host: str, port: int
+) -> dict:
     base_url = f"http://{host}:{port}/session/{session.id}"
     return {
         "session_id": session.id,
