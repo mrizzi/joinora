@@ -114,12 +114,15 @@ class SessionStore:
                 ParticipantJoinedEvent(name=name)
             )
 
-        base = self._session_dir(session_id)
+            base = self._session_dir(session_id)
+            session_data = session.model_dump_json(indent=2)
+            tokens_data = json.dumps(self._tokens[session_id], indent=2)
+
         self._git.commit(
             f"join: {name} in {session_id}",
             {
-                f"{base}/session.json": session.model_dump_json(indent=2),
-                f"{base}/tokens.json": json.dumps(self._tokens[session_id], indent=2),
+                f"{base}/session.json": session_data,
+                f"{base}/tokens.json": tokens_data,
             },
         )
         with self._lock:
@@ -221,6 +224,7 @@ class SessionStore:
             if session.status != SessionStatus.COMPLETE:
                 raise ValueError(f"Session '{session_id}' is not complete")
             session.status = SessionStatus.ACTIVE
+            self._pending[session_id] = []
         self._save_session(session, f"reopen: session {session_id}")
 
     def update_last_seen(
