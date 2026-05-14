@@ -27,26 +27,13 @@ class TestCreateSessionTool:
         assert "session_id" in result
         assert "session_url" in result
         assert "localhost:24298" in result["session_url"]
-
-    @pytest.mark.asyncio
-    async def test_creates_session_with_participants(self, store):
-        result = await create_session(
-            store=store,
-            title="Team",
-            participant_names=["alice", "bob"],
-            host="localhost",
-            port=24298,
-        )
-        session = store.get_session(result["session_id"])
-        assert len(session.participants) == 2
-        assert "participant_urls" in result
-        assert len(result["participant_urls"]) == 2
+        assert "participant_urls" not in result
 
 
 class TestPostMessageTool:
     @pytest.mark.asyncio
     async def test_post_plain_message(self, store):
-        session, _tokens = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         result = await post_message(
             store=store, session_id=session.id, text="Hello everyone"
         )
@@ -57,7 +44,7 @@ class TestPostMessageTool:
 
     @pytest.mark.asyncio
     async def test_post_message_with_metadata(self, store):
-        session, _tokens = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         await post_message(
             store=store,
             session_id=session.id,
@@ -76,9 +63,8 @@ class TestPostMessageTool:
 class TestGetSessionStatusTool:
     @pytest.mark.asyncio
     async def test_returns_status(self, store):
-        session, _tokens = store.create_session(
-            title="Test", participant_names=["alice"]
-        )
+        session = store.create_session(title="Test")
+        store.add_participant(session.id, "alice")
         store.add_message(session.id, "alice", "Hi")
         result = await get_session_status(store=store, session_id=session.id)
         assert result["status"] == "active"
@@ -94,7 +80,7 @@ class TestGetSessionStatusTool:
 class TestGetCatchupSummaryTool:
     @pytest.mark.asyncio
     async def test_returns_messages_since(self, store):
-        session, _tokens = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         msg1 = store.add_message(session.id, "alice", "First")
         store.add_message(session.id, "bob", "Second")
         result = await get_catchup_summary(
@@ -112,7 +98,7 @@ class TestGetCatchupSummaryTool:
 
     @pytest.mark.asyncio
     async def test_malformed_since_raises(self, store):
-        session, _tokens = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         with pytest.raises(ValueError):
             await get_catchup_summary(
                 store=store, session_id=session.id, since="not-a-date"
@@ -122,7 +108,7 @@ class TestGetCatchupSummaryTool:
 class TestEndSessionTool:
     @pytest.mark.asyncio
     async def test_ends_session(self, store):
-        session, _tokens = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         result = await end_session(store=store, session_id=session.id)
         assert result["status"] == "complete"
         updated = store.get_session(session.id)
