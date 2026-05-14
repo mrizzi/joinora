@@ -26,6 +26,27 @@ class SessionStore:
         self.on_agent_state_change: (
             Callable[[str, AgentState], Awaitable[None]] | None
         ) = None
+        self._load_from_git()
+
+    def _load_from_git(self) -> None:
+        for sid in self._git.list_directory("sessions"):
+            session_json = self._git.read_file(f"sessions/{sid}/session.json")
+            if session_json is None:
+                continue
+            session = Session.model_validate_json(session_json)
+
+            messages_json = self._git.read_file(f"sessions/{sid}/messages.json")
+            if messages_json:
+                session.messages = [
+                    Message.model_validate(m) for m in json.loads(messages_json)
+                ]
+
+            tokens_json = self._git.read_file(f"sessions/{sid}/tokens.json")
+            if tokens_json:
+                self._tokens[sid] = json.loads(tokens_json)
+
+            self._sessions[sid] = session
+            self._pending[sid] = []
 
     def _session_dir(self, session_id: str) -> str:
         return f"sessions/{session_id}"
