@@ -160,6 +160,87 @@ class TestEndSession:
             store.end_session("no-such-id")
 
 
+class TestUpdateLastSeen:
+    def test_update_last_seen(self, store):
+        session, _ = store.create_session(title="Test", participant_names=["alice"])
+        now = datetime.now(timezone.utc)
+        store.update_last_seen(session.id, "alice", now)
+        updated = store.get_session(session.id)
+        assert updated.participants[0].last_seen == now
+
+
+class TestAddParticipant:
+    def test_add_participant_returns_token(self, store):
+        session, _ = store.create_session(title="Test")
+        token = store.add_participant(session.id, "alice")
+        assert isinstance(token, str)
+        assert len(token) > 0
+
+    def test_add_participant_appears_in_session(self, store):
+        session, _ = store.create_session(title="Test")
+        store.add_participant(session.id, "alice")
+        updated = store.get_session(session.id)
+        assert len(updated.participants) == 1
+        assert updated.participants[0].name == "alice"
+
+    def test_add_participant_token_authenticates(self, store):
+        session, _ = store.create_session(title="Test")
+        token = store.add_participant(session.id, "alice")
+        assert store.authenticate(session.id, token) == "alice"
+
+    def test_duplicate_name_raises(self, store):
+        session, _ = store.create_session(title="Test")
+        store.add_participant(session.id, "alice")
+        with pytest.raises(ValueError, match="already taken"):
+            store.add_participant(session.id, "alice")
+
+    def test_reserved_name_raises(self, store):
+        session, _ = store.create_session(title="Test")
+        with pytest.raises(ValueError, match="reserved"):
+            store.add_participant(session.id, "ai")
+
+    def test_nonexistent_session_raises(self, store):
+        with pytest.raises(ValueError, match="not found"):
+            store.add_participant("no-such-id", "alice")
+
+    def test_completed_session_raises(self, store):
+        session, _ = store.create_session(title="Test")
+        store.end_session(session.id)
+        with pytest.raises(ValueError, match="not active"):
+            store.add_participant(session.id, "alice")
+
+    def test_persists_token_to_git(self, store):
+        session, _ = store.create_session(title="Test")
+        token = store.add_participant(session.id, "alice")
+        content = store._git.read_file(f"sessions/{session.id}/tokens.json")
+        assert content is not None
+        import json
+
+        tokens = json.loads(content)
+        assert tokens["alice"] == token
+
+    def test_persists_participant_to_git(self, store):
+        session, _ = store.create_session(title="Test")
+        store.add_participant(session.id, "alice")
+        content = store._git.read_file(f"sessions/{session.id}/session.json")
+        assert "alice" in content
+
+
+class TestGetParticipantTokens:
+    def test_returns_tokens_for_session(self, store):
+        session, _ = store.create_session(title="Test")
+        token = store.add_participant(session.id, "alice")
+        tokens = store.get_participant_tokens(session.id)
+        assert tokens == {"alice": token}
+
+    def test_returns_empty_for_no_participants(self, store):
+        session, _ = store.create_session(title="Test")
+        assert store.get_participant_tokens(session.id) == {}
+
+    def test_returns_empty_for_nonexistent_session(self, store):
+        assert store.get_participant_tokens("no-such-id") == {}
+
+
 class TestSubscriberNotification:
     @pytest.mark.asyncio
     async def test_wait_for_activity_returns_on_message(self, store):
@@ -170,15 +251,16 @@ class TestSubscriberNotification:
             store.add_message(session.id, "alice", "Hello")
 
         asyncio.create_task(post_after_delay())
-        messages = await store.wait_for_activity(session.id, timeout=2.0)
-        assert len(messages) >= 1
-        assert messages[0].author == "alice"
+        events = await store.wait_for_activity(session.id, timeout=2.0)
+        assert len(events) >= 1
+        assert events[0]["type"] == "message"
+        assert events[0]["message"].author == "alice"
 
     @pytest.mark.asyncio
     async def test_wait_for_activity_timeout_returns_empty(self, store):
         session, _ = store.create_session(title="Test")
-        messages = await store.wait_for_activity(session.id, timeout=0.1)
-        assert messages == []
+        events = await store.wait_for_activity(session.id, timeout=0.1)
+        assert events == []
 
     @pytest.mark.asyncio
     async def test_wait_returns_batched_messages(self, store):
@@ -190,17 +272,25 @@ class TestSubscriberNotification:
             store.add_message(session.id, "bob", "Second")
 
         asyncio.create_task(post_two())
-        messages = await store.wait_for_activity(session.id, timeout=2.0)
-        assert len(messages) >= 2
+        events = await store.wait_for_activity(session.id, timeout=2.0)
+        assert len(events) >= 2
+        assert all(e["type"] == "message" for e in events)
 
 
-class TestUpdateLastSeen:
-    def test_update_last_seen(self, store):
-        session, _ = store.create_session(title="Test", participant_names=["alice"])
-        now = datetime.now(timezone.utc)
-        store.update_last_seen(session.id, "alice", now)
-        updated = store.get_session(session.id)
-        assert updated.participants[0].last_seen == now
+class TestJoinWakesWatch:
+    @pytest.mark.asyncio
+    async def test_add_participant_wakes_watch(self, store):
+        session, _ = store.create_session(title="Test")
+
+        async def join_after_delay():
+            await asyncio.sleep(0.1)
+            store.add_participant(session.id, "alice")
+
+        asyncio.create_task(join_after_delay())
+        events = await store.wait_for_activity(session.id, timeout=2.0)
+        assert len(events) >= 1
+        assert events[0]["type"] == "participant_joined"
+        assert events[0]["participant"]["name"] == "alice"
 
 
 class TestAgentStateCallback:
@@ -236,9 +326,9 @@ class TestAgentStateCallback:
             store.add_message(session.id, "alice", "Hi")
 
         asyncio.create_task(post_soon())
-        messages = await store.wait_for_activity(session.id, timeout=2.0)
-        assert len(messages) >= 1
-        assert messages[0].text == "Hi"
+        events = await store.wait_for_activity(session.id, timeout=2.0)
+        assert len(events) >= 1
+        assert events[0]["message"].text == "Hi"
 
     @pytest.mark.asyncio
     async def test_callback_called_with_processing_on_message(self, store):

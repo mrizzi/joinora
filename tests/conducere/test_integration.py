@@ -81,8 +81,9 @@ class TestFullFlow:
 
         activity = await store.wait_for_activity(session_id, timeout=2.0)
         assert len(activity) >= 1
-        assert activity[0].author == "alice"
-        assert activity[0].text == "My answer"
+        assert activity[0]["type"] == "message"
+        assert activity[0]["message"].author == "alice"
+        assert activity[0]["message"].text == "My answer"
 
     @pytest.mark.asyncio
     async def test_session_lifecycle(self, setup):
