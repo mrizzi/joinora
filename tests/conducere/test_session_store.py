@@ -13,42 +13,31 @@ def store(tmp_path):
 
 
 class TestCreateSession:
-    def test_create_returns_session_and_tokens(self, store):
-        session, tokens = store.create_session(title="Test Session")
+    def test_create_returns_session(self, store):
+        session = store.create_session(title="Test Session")
         assert session.id
         assert session.status == SessionStatus.ACTIVE
-        assert tokens == {}
-
-    def test_create_with_participants(self, store):
-        session, tokens = store.create_session(
-            title="Team Session",
-            participant_names=["alice", "bob"],
-        )
-        assert len(session.participants) == 2
-        assert session.participants[0].name == "alice"
-        assert "alice" in tokens
-        assert "bob" in tokens
+        assert len(session.participants) == 0
 
     def test_create_generates_unique_ids(self, store):
-        s1, _ = store.create_session(title="A")
-        s2, _ = store.create_session(title="B")
+        s1 = store.create_session(title="A")
+        s2 = store.create_session(title="B")
         assert s1.id != s2.id
 
     def test_create_persists_to_git(self, store):
-        session, _ = store.create_session(title="Persisted")
+        session = store.create_session(title="Persisted")
         content = store._git.read_file(f"sessions/{session.id}/session.json")
         assert content is not None
         assert "Persisted" in content
 
-    def test_git_does_not_contain_tokens(self, store):
-        session, tokens = store.create_session(
-            title="Secrets", participant_names=["alice"]
-        )
+    def test_session_json_does_not_contain_tokens(self, store):
+        session = store.create_session(title="Secrets")
+        token = store.add_participant(session.id, "alice")
         content = store._git.read_file(f"sessions/{session.id}/session.json")
-        assert tokens["alice"] not in content
+        assert token not in content
 
     def test_returns_copy_not_reference(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         session.title = "Mutated"
         fetched = store.get_session(session.id)
         assert fetched.title == "Test"
@@ -56,14 +45,14 @@ class TestCreateSession:
 
 class TestAuthenticate:
     def test_valid_token(self, store):
-        session, tokens = store.create_session(
-            title="Test", participant_names=["alice"]
-        )
-        user = store.authenticate(session.id, tokens["alice"])
+        session = store.create_session(title="Test")
+        token = store.add_participant(session.id, "alice")
+        user = store.authenticate(session.id, token)
         assert user == "alice"
 
     def test_invalid_token(self, store):
-        session, _ = store.create_session(title="Test", participant_names=["alice"])
+        session = store.create_session(title="Test")
+        store.add_participant(session.id, "alice")
         assert store.authenticate(session.id, "bad-token") is None
 
     def test_nonexistent_session(self, store):
@@ -72,7 +61,7 @@ class TestAuthenticate:
 
 class TestGetSession:
     def test_get_existing_session(self, store):
-        created, _ = store.create_session(title="Test")
+        created = store.create_session(title="Test")
         fetched = store.get_session(created.id)
         assert fetched is not None
         assert fetched.id == created.id
@@ -81,7 +70,7 @@ class TestGetSession:
         assert store.get_session("no-such-id") is None
 
     def test_get_returns_copy(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         fetched = store.get_session(session.id)
         fetched.messages.append(None)
         refetched = store.get_session(session.id)
@@ -90,7 +79,7 @@ class TestGetSession:
 
 class TestAddMessage:
     def test_add_message_returns_message(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         msg = store.add_message(
             session_id=session.id,
             author="alice",
@@ -101,7 +90,7 @@ class TestAddMessage:
         assert msg.text == "Hello"
 
     def test_add_message_with_metadata(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         msg = store.add_message(
             session_id=session.id,
             author="ai",
@@ -111,7 +100,7 @@ class TestAddMessage:
         assert msg.metadata == {"type": "question"}
 
     def test_messages_are_ordered(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         store.add_message(session.id, "alice", "First")
         store.add_message(session.id, "bob", "Second")
         messages = store.get_messages(session.id)
@@ -124,13 +113,13 @@ class TestAddMessage:
             store.add_message("no-such-id", "alice", "Hello")
 
     def test_add_to_complete_session_raises(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         store.end_session(session.id)
         with pytest.raises(ValueError, match="not active"):
             store.add_message(session.id, "alice", "Hello")
 
     def test_add_message_creates_git_commit(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         store.add_message(session.id, "alice", "Hello")
         log = store._git.log(f"sessions/{session.id}")
         assert any("message: alice" in entry["message"] for entry in log)
@@ -138,7 +127,7 @@ class TestAddMessage:
 
 class TestGetMessages:
     def test_get_messages_since(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         msg1 = store.add_message(session.id, "alice", "First")
         store.add_message(session.id, "bob", "Second")
         since = msg1.timestamp
@@ -149,7 +138,7 @@ class TestGetMessages:
 
 class TestEndSession:
     def test_end_session_marks_complete(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         record = store.end_session(session.id)
         assert record["status"] == "complete"
         updated = store.get_session(session.id)
@@ -162,7 +151,8 @@ class TestEndSession:
 
 class TestUpdateLastSeen:
     def test_update_last_seen(self, store):
-        session, _ = store.create_session(title="Test", participant_names=["alice"])
+        session = store.create_session(title="Test")
+        store.add_participant(session.id, "alice")
         now = datetime.now(timezone.utc)
         store.update_last_seen(session.id, "alice", now)
         updated = store.get_session(session.id)
@@ -171,31 +161,31 @@ class TestUpdateLastSeen:
 
 class TestAddParticipant:
     def test_add_participant_returns_token(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         token = store.add_participant(session.id, "alice")
         assert isinstance(token, str)
         assert len(token) > 0
 
     def test_add_participant_appears_in_session(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         store.add_participant(session.id, "alice")
         updated = store.get_session(session.id)
         assert len(updated.participants) == 1
         assert updated.participants[0].name == "alice"
 
     def test_add_participant_token_authenticates(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         token = store.add_participant(session.id, "alice")
         assert store.authenticate(session.id, token) == "alice"
 
     def test_duplicate_name_raises(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         store.add_participant(session.id, "alice")
         with pytest.raises(ValueError, match="already taken"):
             store.add_participant(session.id, "alice")
 
     def test_reserved_name_raises(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         with pytest.raises(ValueError, match="reserved"):
             store.add_participant(session.id, "ai")
 
@@ -204,13 +194,13 @@ class TestAddParticipant:
             store.add_participant("no-such-id", "alice")
 
     def test_completed_session_raises(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         store.end_session(session.id)
         with pytest.raises(ValueError, match="not active"):
             store.add_participant(session.id, "alice")
 
     def test_persists_token_to_git(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         token = store.add_participant(session.id, "alice")
         content = store._git.read_file(f"sessions/{session.id}/tokens.json")
         assert content is not None
@@ -220,7 +210,7 @@ class TestAddParticipant:
         assert tokens["alice"] == token
 
     def test_persists_participant_to_git(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         store.add_participant(session.id, "alice")
         content = store._git.read_file(f"sessions/{session.id}/session.json")
         assert "alice" in content
@@ -228,13 +218,13 @@ class TestAddParticipant:
 
 class TestGetParticipantTokens:
     def test_returns_tokens_for_session(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         token = store.add_participant(session.id, "alice")
         tokens = store.get_participant_tokens(session.id)
         assert tokens == {"alice": token}
 
     def test_returns_empty_for_no_participants(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         assert store.get_participant_tokens(session.id) == {}
 
     def test_returns_empty_for_nonexistent_session(self, store):
@@ -244,7 +234,7 @@ class TestGetParticipantTokens:
 class TestSubscriberNotification:
     @pytest.mark.asyncio
     async def test_wait_for_activity_returns_on_message(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
 
         async def post_after_delay():
             await asyncio.sleep(0.1)
@@ -258,13 +248,13 @@ class TestSubscriberNotification:
 
     @pytest.mark.asyncio
     async def test_wait_for_activity_timeout_returns_empty(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         events = await store.wait_for_activity(session.id, timeout=0.1)
         assert events == []
 
     @pytest.mark.asyncio
     async def test_wait_returns_batched_messages(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
 
         async def post_two():
             await asyncio.sleep(0.05)
@@ -280,7 +270,7 @@ class TestSubscriberNotification:
 class TestJoinWakesWatch:
     @pytest.mark.asyncio
     async def test_add_participant_wakes_watch(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
 
         async def join_after_delay():
             await asyncio.sleep(0.1)
@@ -296,7 +286,7 @@ class TestJoinWakesWatch:
 class TestAgentStateCallback:
     @pytest.mark.asyncio
     async def test_callback_called_with_listening_on_entry(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         states = []
 
         async def on_change(sid, state):
@@ -314,7 +304,7 @@ class TestAgentStateCallback:
 
     @pytest.mark.asyncio
     async def test_callback_exception_does_not_abort_wait(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
 
         async def failing_callback(sid, state):
             raise RuntimeError("callback failure")
@@ -332,7 +322,7 @@ class TestAgentStateCallback:
 
     @pytest.mark.asyncio
     async def test_callback_called_with_processing_on_message(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         states = []
 
         async def on_change(sid, state):
@@ -351,7 +341,7 @@ class TestAgentStateCallback:
 
     @pytest.mark.asyncio
     async def test_callback_called_with_disconnected_on_timeout(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         states = []
 
         async def on_change(sid, state):
@@ -366,12 +356,12 @@ class TestAgentStateCallback:
     @pytest.mark.asyncio
     async def test_no_callback_by_default(self, store):
         assert store.on_agent_state_change is None
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         await store.wait_for_activity(session.id, timeout=0.1)
 
     @pytest.mark.asyncio
     async def test_callback_receives_correct_session_id(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         received_ids = []
 
         async def on_change(sid, state):
@@ -383,7 +373,7 @@ class TestAgentStateCallback:
 
     @pytest.mark.asyncio
     async def test_state_transitions_are_ordered(self, store):
-        session, _ = store.create_session(title="Test")
+        session = store.create_session(title="Test")
         states = []
 
         async def on_change(sid, state):

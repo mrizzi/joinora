@@ -9,19 +9,12 @@ async def create_session(
     title: str,
     host: str,
     port: int,
-    participant_names: list[str] | None = None,
 ) -> dict:
-    session, tokens = store.create_session(
-        title=title, participant_names=participant_names
-    )
+    session = store.create_session(title=title)
     base_url = f"http://{host}:{port}/session/{session.id}"
-    participant_urls = {
-        name: f"{base_url}?token={token}" for name, token in tokens.items()
-    }
     return {
         "session_id": session.id,
         "session_url": base_url,
-        "participant_urls": participant_urls,
     }
 
 

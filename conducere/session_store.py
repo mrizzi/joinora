@@ -46,23 +46,11 @@ class SessionStore:
             },
         )
 
-    def create_session(
-        self,
-        title: str,
-        participant_names: list[str] | None = None,
-    ) -> tuple[Session, dict[str, str]]:
-        tokens: dict[str, str] = {}
-        participants = []
-        for name in participant_names or []:
-            token = secrets.token_urlsafe(16)
-            tokens[name] = token
-            participants.append(Participant(name=name))
-
+    def create_session(self, title: str) -> Session:
         session_id = secrets.token_urlsafe(12)
         session = Session(
             id=session_id,
             title=title,
-            participants=participants,
             created_at=datetime.now(timezone.utc),
         )
         base = self._session_dir(session_id)
@@ -75,9 +63,8 @@ class SessionStore:
         )
         with self._lock:
             self._sessions[session_id] = session
-            self._tokens[session_id] = tokens
             self._pending[session_id] = []
-        return session.model_copy(deep=True), tokens
+        return session.model_copy(deep=True)
 
     def add_participant(self, session_id: str, name: str) -> str:
         participant = Participant(name=name)

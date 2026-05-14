@@ -26,10 +26,7 @@ def create_server(
     )
 
     @mcp.tool()
-    async def create_session(
-        title: str,
-        participant_names: list[str] | None = None,
-    ) -> dict:
+    async def create_session(title: str) -> dict:
         """Create a new collaborative session. Returns session_id and
         a session_url to share with participants."""
         from conducere.tools import create_session as _create
@@ -39,7 +36,6 @@ def create_server(
             title=title,
             host=web_host,
             port=web_port,
-            participant_names=participant_names,
         )
 
     @mcp.tool()

@@ -54,12 +54,19 @@ def create_web_app(store: SessionStore) -> FastAPI:
 
     @app.get("/api/sessions/{session_id}")
     def get_session(session_id: str, token: str | None = None):
-        user = _authenticate(session_id, token)
-        if user is None:
-            raise HTTPException(status_code=401, detail="Authentication required")
         session = store.get_session(session_id)
         if session is None:
             raise HTTPException(status_code=404, detail="Session not found")
+
+        user = _authenticate(session_id, token)
+        if user is None:
+            return {
+                "id": session.id,
+                "title": session.title,
+                "status": session.status.value,
+                "participant_count": len(session.participants),
+            }
+
         data = session.model_dump(mode="json")
         data["current_user"] = user
         participant = next((p for p in session.participants if p.name == user), None)

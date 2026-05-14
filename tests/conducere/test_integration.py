@@ -29,10 +29,12 @@ class TestFullFlow:
             title="Define Feature X",
             host="localhost",
             port=24299,
-            participant_names=["alice", "bob"],
         )
         session_id = result["session_id"]
         assert result["session_url"]
+
+        alice_token = store.add_participant(session_id, "alice")
+        store.add_participant(session_id, "bob")
 
         await post_message(
             store=store,
@@ -45,7 +47,6 @@ class TestFullFlow:
         assert len(messages) == 1
         assert messages[0].metadata["type"] == "question"
 
-        alice_token = result["participant_urls"]["alice"].split("token=")[1]
         resp = client.post(
             f"/api/sessions/{session_id}/messages?token={alice_token}",
             json={
@@ -69,9 +70,10 @@ class TestFullFlow:
             title="Test Watch",
             host="localhost",
             port=24299,
-            participant_names=["alice"],
         )
         session_id = result["session_id"]
+
+        store.add_participant(session_id, "alice")
 
         async def post_after_delay():
             await asyncio.sleep(0.1)
@@ -79,11 +81,11 @@ class TestFullFlow:
 
         asyncio.create_task(post_after_delay())
 
-        activity = await store.wait_for_activity(session_id, timeout=2.0)
-        assert len(activity) >= 1
-        assert activity[0]["type"] == "message"
-        assert activity[0]["message"].author == "alice"
-        assert activity[0]["message"].text == "My answer"
+        events = await store.wait_for_activity(session_id, timeout=2.0)
+        assert len(events) >= 1
+        assert events[0]["type"] == "message"
+        assert events[0]["message"].author == "alice"
+        assert events[0]["message"].text == "My answer"
 
     @pytest.mark.asyncio
     async def test_session_lifecycle(self, setup):
