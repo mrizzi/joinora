@@ -390,3 +390,50 @@ class TestAgentStateCallback:
         assert len(states) == 2
         assert states[0] == AgentState.LISTENING
         assert states[1] == AgentState.PROCESSING
+
+
+class TestStartupLoading:
+    def test_loads_session_from_git(self, tmp_path):
+        store1 = SessionStore(repo_path=tmp_path)
+        session = store1.create_session(title="Persisted")
+        store1.add_participant(session.id, "alice")
+        store1.add_message(session.id, "alice", "Hello")
+
+        store2 = SessionStore(repo_path=tmp_path)
+        loaded = store2.get_session(session.id)
+        assert loaded is not None
+        assert loaded.title == "Persisted"
+        assert len(loaded.participants) == 1
+        assert loaded.participants[0].name == "alice"
+        assert len(loaded.messages) == 1
+        assert loaded.messages[0].text == "Hello"
+
+    def test_loads_tokens_from_git(self, tmp_path):
+        store1 = SessionStore(repo_path=tmp_path)
+        session = store1.create_session(title="Test")
+        token = store1.add_participant(session.id, "alice")
+
+        store2 = SessionStore(repo_path=tmp_path)
+        assert store2.authenticate(session.id, token) == "alice"
+
+    def test_empty_repo_loads_nothing(self, tmp_path):
+        store = SessionStore(repo_path=tmp_path)
+        assert store.get_session("anything") is None
+
+    def test_loads_multiple_sessions(self, tmp_path):
+        store1 = SessionStore(repo_path=tmp_path)
+        s1 = store1.create_session(title="First")
+        s2 = store1.create_session(title="Second")
+
+        store2 = SessionStore(repo_path=tmp_path)
+        assert store2.get_session(s1.id) is not None
+        assert store2.get_session(s2.id) is not None
+
+    def test_loads_completed_session(self, tmp_path):
+        store1 = SessionStore(repo_path=tmp_path)
+        session = store1.create_session(title="Done")
+        store1.end_session(session.id)
+
+        store2 = SessionStore(repo_path=tmp_path)
+        loaded = store2.get_session(session.id)
+        assert loaded.status == SessionStatus.COMPLETE
