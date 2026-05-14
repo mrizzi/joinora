@@ -17,6 +17,10 @@ class PostMessageRequest(BaseModel):
     metadata: dict[str, str] | None = None
 
 
+class JoinRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=50, pattern=r"^[\w\- ]+$")
+
+
 def create_web_app(store: SessionStore) -> FastAPI:
     app = FastAPI()
     ws_manager = WebSocketManager()
@@ -121,6 +125,26 @@ def create_web_app(store: SessionStore) -> FastAPI:
             {"type": "message_added", "message": message.model_dump(mode="json")},
         )
         return message.model_dump(mode="json")
+
+    @app.post("/api/sessions/{session_id}/join", status_code=201)
+    async def join_session(session_id: str, req: JoinRequest):
+        session = store.get_session(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        if session.status.value == "complete":
+            raise HTTPException(status_code=410, detail="Session has ended")
+        try:
+            token = store.add_participant(session_id, req.name)
+        except ValueError as e:
+            msg = str(e)
+            if "already taken" in msg:
+                raise HTTPException(status_code=409, detail=msg)
+            raise HTTPException(status_code=400, detail=msg)
+        await ws_manager.broadcast(
+            session_id,
+            {"type": "participant_joined", "user": req.name},
+        )
+        return {"name": req.name, "token": token}
 
     @app.websocket("/ws/sessions/{session_id}")
     async def websocket_endpoint(websocket: WebSocket, session_id: str):
