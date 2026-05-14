@@ -15,8 +15,8 @@ skill's logic.
    title based on the target skill.
 2. Present the session URL to the coordinator:
    > "Share this link with participants: **{session_url}**"
-   > Individual participant links: {participant_urls}
-3. Wait briefly for participants to connect, then begin.
+   > Anyone with the link can join by picking a name.
+3. Use `watch_session` to wait for participants to join and begin.
 
 ## Interaction Rules
 
@@ -42,11 +42,16 @@ skill's logic.
 
 **Monitoring:**
 
-- Use `get_session_status` to check who's active.
-- If a participant reconnects and the `watch_session` returns a
-  `/catchup` message, generate a summary of recent activity using
-  `get_catchup_summary` and post it with
-  `metadata: {"type": "summary", "for": "<participant_name>"}`.
+- `watch_session` returns events — both `"message"` and
+  `"participant_joined"` types. Process all events in order.
+- Use `get_session_status` to check who's active. Returns
+  participant URLs with tokens for re-sharing.
+
+**Session management:**
+
+- Use `list_sessions` to discover existing sessions after
+  reconnection. Returns all sessions with participant URLs.
+- Use `reopen_session` to reactivate a completed session.
 
 ## Completing the Session
 
