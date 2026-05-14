@@ -210,3 +210,90 @@ class TestAgentStateWebSocket:
             assert data["type"] == "agent_listening"
             data2 = ws.receive_json()
             assert data2["type"] == "agent_processing"
+
+
+class TestJoinAPI:
+    def test_join_session(self, client, store):
+        session = store.create_session(title="Test")
+        resp = client.post(
+            f"/api/sessions/{session.id}/join",
+            json={"name": "alice"},
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["name"] == "alice"
+        assert "token" in data
+
+    def test_join_token_authenticates(self, client, store):
+        session = store.create_session(title="Test")
+        resp = client.post(
+            f"/api/sessions/{session.id}/join",
+            json={"name": "alice"},
+        )
+        token = resp.json()["token"]
+        msg_resp = client.post(
+            f"/api/sessions/{session.id}/messages",
+            json={"text": "Hello"},
+            params={"token": token},
+        )
+        assert msg_resp.status_code == 201
+        assert msg_resp.json()["author"] == "alice"
+
+    def test_join_duplicate_name_returns_409(self, client, store):
+        session = store.create_session(title="Test")
+        client.post(
+            f"/api/sessions/{session.id}/join",
+            json={"name": "alice"},
+        )
+        resp = client.post(
+            f"/api/sessions/{session.id}/join",
+            json={"name": "alice"},
+        )
+        assert resp.status_code == 409
+
+    def test_join_reserved_name_returns_400(self, client, store):
+        session = store.create_session(title="Test")
+        resp = client.post(
+            f"/api/sessions/{session.id}/join",
+            json={"name": "ai"},
+        )
+        assert resp.status_code == 400
+
+    def test_join_empty_name_returns_422(self, client, store):
+        session = store.create_session(title="Test")
+        resp = client.post(
+            f"/api/sessions/{session.id}/join",
+            json={"name": ""},
+        )
+        assert resp.status_code == 422
+
+    def test_join_nonexistent_session_returns_404(self, client):
+        resp = client.post(
+            "/api/sessions/no-such-id/join",
+            json={"name": "alice"},
+        )
+        assert resp.status_code == 404
+
+    def test_join_completed_session_returns_410(self, client, store):
+        session = store.create_session(title="Test")
+        store.end_session(session.id)
+        resp = client.post(
+            f"/api/sessions/{session.id}/join",
+            json={"name": "alice"},
+        )
+        assert resp.status_code == 410
+
+    def test_join_broadcasts_websocket(self, client, store):
+        session = store.create_session(title="Test")
+        first_token = store.add_participant(session.id, "alice")
+        with client.websocket_connect(
+            f"/ws/sessions/{session.id}?token={first_token}"
+        ) as ws:
+            ws.receive_json()  # alice's own participant_joined
+            client.post(
+                f"/api/sessions/{session.id}/join",
+                json={"name": "bob"},
+            )
+            data = ws.receive_json()
+            assert data["type"] == "participant_joined"
+            assert data["user"] == "bob"
