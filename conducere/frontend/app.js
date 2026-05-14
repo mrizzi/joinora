@@ -35,10 +35,10 @@
 
     var token = params.get("token");
     if (token) {
-        sessionStorage.setItem("dc-token-" + sessionId, token);
+        localStorage.setItem("dc-token-" + sessionId, token);
         history.replaceState(null, "", window.location.pathname);
     } else {
-        token = sessionStorage.getItem("dc-token-" + sessionId);
+        token = localStorage.getItem("dc-token-" + sessionId);
     }
 
     var ALLOWED_TYPES = { question: 1, proposal: 1, summary: 1, info: 1, ai: 1, human: 1 };
@@ -54,6 +54,12 @@
     var catchupYes = document.getElementById("catchup-yes");
     var catchupDismiss = document.getElementById("catchup-dismiss");
     var agentDot = document.getElementById("agent-dot");
+    var joinOverlay = document.getElementById("join-overlay");
+    var joinTitle = document.getElementById("join-title");
+    var joinForm = document.getElementById("join-form");
+    var joinNameInput = document.getElementById("join-name");
+    var joinError = document.getElementById("join-error");
+    var joinEnded = document.getElementById("join-ended");
 
     var ws = null;
     var currentUser = null;
@@ -69,6 +75,12 @@
         var session = await resp.json();
         currentUser = session.current_user || null;
         titleEl.textContent = session.title;
+
+        if (!currentUser) {
+            showJoinOverlay(session);
+            return;
+        }
+
         renderParticipants(session.participants);
 
         var msgResp = await fetch("/api/sessions/" + sessionId + "/messages" + (token ? "?token=" + token : ""));
@@ -89,13 +101,21 @@
             }
         }
 
+        inputEl.disabled = false;
+        sendBtn.disabled = false;
+        inputEl.placeholder = "Type your message...";
         connectWebSocket();
+    }
 
-        if (!token) {
-            inputEl.disabled = true;
-            sendBtn.disabled = true;
-            inputEl.placeholder = "Join with an invite link to participate";
+    function showJoinOverlay(session) {
+        joinTitle.textContent = session.title;
+        if (session.status === "complete") {
+            joinForm.classList.add("hidden");
+            joinEnded.classList.remove("hidden");
         }
+        joinOverlay.classList.remove("hidden");
+        inputEl.disabled = true;
+        sendBtn.disabled = true;
     }
 
     function badgeClass(name, extra) {
@@ -264,6 +284,32 @@
 
     catchupDismiss.addEventListener("click", function () {
         catchupBanner.classList.add("hidden");
+    });
+
+    joinForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var name = joinNameInput.value.trim();
+        if (!name) return;
+
+        joinError.classList.add("hidden");
+        var resp = await fetch("/api/sessions/" + sessionId + "/join", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: name }),
+        });
+
+        if (!resp.ok) {
+            var err = await resp.json();
+            joinError.textContent = err.detail || "Join failed";
+            joinError.classList.remove("hidden");
+            return;
+        }
+
+        var data = await resp.json();
+        token = data.token;
+        localStorage.setItem("dc-token-" + sessionId, token);
+        joinOverlay.classList.add("hidden");
+        init();
     });
 
     init();
