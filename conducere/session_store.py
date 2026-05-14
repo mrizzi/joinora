@@ -21,7 +21,7 @@ class SessionStore:
         self._tokens: dict[str, dict[str, str]] = {}
         self._events: dict[str, asyncio.Event] = {}
         self._loops: dict[str, asyncio.AbstractEventLoop] = {}
-        self._pending: dict[str, list[Message]] = {}
+        self._pending: dict[str, list[dict]] = {}
         self._lock = threading.Lock()
         self.on_agent_state_change: (
             Callable[[str, AgentState], Awaitable[None]] | None
@@ -79,6 +79,44 @@ class SessionStore:
             self._pending[session_id] = []
         return session.model_copy(deep=True), tokens
 
+    def add_participant(self, session_id: str, name: str) -> str:
+        if name == "ai":
+            raise ValueError(f"Name '{name}' is reserved")
+
+        participant = Participant(name=name)
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise ValueError(f"Session '{session_id}' not found")
+            if session.status != SessionStatus.ACTIVE:
+                raise ValueError(f"Session '{session_id}' is not active")
+            if any(p.name == name for p in session.participants):
+                raise ValueError(f"Name '{name}' is already taken in this session")
+
+            token = secrets.token_urlsafe(16)
+            session.participants.append(participant)
+            self._tokens.setdefault(session_id, {})[name] = token
+            self._pending.setdefault(session_id, []).append(
+                {"type": "participant_joined", "participant": {"name": name}}
+            )
+
+        base = self._session_dir(session_id)
+        self._git.commit(
+            f"join: {name} in {session_id}",
+            {
+                f"{base}/session.json": session.model_dump_json(indent=2),
+                f"{base}/tokens.json": json.dumps(
+                    self._tokens[session_id], indent=2
+                ),
+            },
+        )
+        with self._lock:
+            event = self._events.get(session_id)
+            loop = self._loops.get(session_id)
+        if event and loop:
+            loop.call_soon_threadsafe(event.set)
+        return token
+
     def get_session(self, session_id: str) -> Session | None:
         with self._lock:
             session = self._sessions.get(session_id)
@@ -93,6 +131,10 @@ class SessionStore:
                 if t == token:
                     return name
         return None
+
+    def get_participant_tokens(self, session_id: str) -> dict[str, str]:
+        with self._lock:
+            return dict(self._tokens.get(session_id, {}))
 
     def add_message(
         self,
@@ -117,7 +159,9 @@ class SessionStore:
                 metadata=metadata,
             )
             session.messages.append(message)
-            self._pending.setdefault(session_id, []).append(message)
+            self._pending.setdefault(session_id, []).append(
+                {"type": "message", "message": message}
+            )
 
         self._save_messages(session, f"message: {author} in {session_id}")
         with self._lock:
@@ -170,7 +214,7 @@ class SessionStore:
 
     async def wait_for_activity(
         self, session_id: str, timeout: float = 300.0
-    ) -> list[Message]:
+    ) -> list[dict]:
         event = asyncio.Event()
         loop = asyncio.get_running_loop()
         with self._lock:
@@ -190,16 +234,16 @@ class SessionStore:
             pass
 
         with self._lock:
-            messages = self._pending.get(session_id, [])
+            events = self._pending.get(session_id, [])
             self._pending[session_id] = []
             self._events.pop(session_id, None)
             self._loops.pop(session_id, None)
 
         if self.on_agent_state_change:
-            state = AgentState.PROCESSING if messages else AgentState.DISCONNECTED
+            state = AgentState.PROCESSING if events else AgentState.DISCONNECTED
             try:
                 await self.on_agent_state_change(session_id, state)
             except Exception:
                 logger.warning("agent state callback failed", exc_info=True)
 
-        return messages
+        return events
