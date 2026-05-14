@@ -128,15 +128,14 @@ def create_web_app(store: SessionStore) -> FastAPI:
 
     @app.post("/api/sessions/{session_id}/join", status_code=201)
     async def join_session(session_id: str, req: JoinRequest):
-        session = store.get_session(session_id)
-        if session is None:
-            raise HTTPException(status_code=404, detail="Session not found")
-        if session.status.value == "complete":
-            raise HTTPException(status_code=410, detail="Session has ended")
         try:
             token = store.add_participant(session_id, req.name)
         except ValueError as e:
             msg = str(e)
+            if "not found" in msg:
+                raise HTTPException(status_code=404, detail="Session not found")
+            if "not active" in msg:
+                raise HTTPException(status_code=410, detail="Session has ended")
             if "already taken" in msg:
                 raise HTTPException(status_code=409, detail=msg)
             raise HTTPException(status_code=400, detail=msg)
