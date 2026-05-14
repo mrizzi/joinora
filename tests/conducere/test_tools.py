@@ -6,7 +6,9 @@ from conducere.tools import (
     end_session,
     get_catchup_summary,
     get_session_status,
+    list_sessions,
     post_message,
+    reopen_session,
 )
 
 
@@ -118,6 +120,40 @@ class TestEndSessionTool:
     async def test_nonexistent_session_raises(self, store):
         with pytest.raises(ValueError, match="not found"):
             await end_session(store=store, session_id="no-such-id")
+
+
+class TestListSessionsTool:
+    @pytest.mark.asyncio
+    async def test_returns_sessions_with_urls(self, store):
+        session = store.create_session(title="Test")
+        store.add_participant(session.id, "alice")
+        result = await list_sessions(store=store, host="localhost", port=24298)
+        assert len(result["sessions"]) == 1
+        entry = result["sessions"][0]
+        assert entry["session_id"] == session.id
+        assert "localhost:24298" in entry["session_url"]
+        assert entry["title"] == "Test"
+        assert len(entry["participants"]) == 1
+        assert "token=" in entry["participants"][0]["url"]
+
+    @pytest.mark.asyncio
+    async def test_empty_when_no_sessions(self, store):
+        result = await list_sessions(store=store, host="localhost", port=24298)
+        assert result["sessions"] == []
+
+
+class TestReopenSessionTool:
+    @pytest.mark.asyncio
+    async def test_reopens_completed_session(self, store):
+        session = store.create_session(title="Test")
+        store.end_session(session.id)
+        result = await reopen_session(store=store, session_id=session.id)
+        assert result["status"] == "active"
+
+    @pytest.mark.asyncio
+    async def test_reopen_nonexistent_raises(self, store):
+        with pytest.raises(ValueError, match="not found"):
+            await reopen_session(store=store, session_id="no-such-id")
 
 
 class TestMCPServerCreation:

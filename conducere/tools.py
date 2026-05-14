@@ -63,3 +63,44 @@ async def get_catchup_summary(
 
 async def end_session(store: SessionStore, session_id: str) -> dict:
     return store.end_session(session_id)
+
+
+async def list_sessions(
+    store: SessionStore,
+    host: str,
+    port: int,
+) -> dict:
+    sessions = store.list_all_sessions()
+    result = []
+    for session in sessions:
+        tokens = store.get_participant_tokens(session.id)
+        base_url = f"http://{host}:{port}/session/{session.id}"
+        result.append(
+            {
+                "session_id": session.id,
+                "session_url": base_url,
+                "title": session.title,
+                "status": session.status.value,
+                "message_count": len(session.messages),
+                "participants": [
+                    {
+                        "name": p.name,
+                        "url": f"{base_url}?token={tokens.get(p.name, '')}",
+                        "last_seen": (p.last_seen.isoformat() if p.last_seen else None),
+                    }
+                    for p in session.participants
+                ],
+            }
+        )
+    return {"sessions": result}
+
+
+async def reopen_session(store: SessionStore, session_id: str) -> dict:
+    store.reopen_session(session_id)
+    session = store.get_session(session_id)
+    return {
+        "status": session.status.value,
+        "title": session.title,
+        "message_count": len(session.messages),
+        "participants": [p.name for p in session.participants],
+    }
