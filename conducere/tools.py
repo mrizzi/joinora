@@ -30,18 +30,28 @@ async def post_message(
     return {"message_id": message.id, "message": message}
 
 
-async def get_session_status(store: SessionStore, session_id: str) -> dict:
+async def get_session_status(
+    store: SessionStore,
+    session_id: str,
+    host: str = "localhost",
+    port: int = 24298,
+) -> dict:
     session = store.get_session(session_id)
     if session is None:
         raise ValueError(f"Session '{session_id}' not found")
+    tokens = store.get_participant_tokens(session_id)
+    base_url = f"http://{host}:{port}/session/{session.id}"
     return {
+        "session_id": session.id,
+        "session_url": base_url,
         "status": session.status.value,
         "title": session.title,
         "message_count": len(session.messages),
         "participants": [
             {
                 "name": p.name,
-                "last_seen": p.last_seen.isoformat() if p.last_seen else None,
+                "url": f"{base_url}?token={tokens.get(p.name, '')}",
+                "last_seen": (p.last_seen.isoformat() if p.last_seen else None),
             }
             for p in session.participants
         ],

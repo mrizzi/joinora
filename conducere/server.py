@@ -66,19 +66,30 @@ def create_server(
     @mcp.tool(task=True)
     async def watch_session(session_id: str) -> dict:
         """Start monitoring a session for participant activity.
-        Returns new messages when participants comment.
+        Returns events (messages and joins) when participants interact.
         Runs as a background MCP Task."""
-        messages = await store.wait_for_activity(session_id, timeout=300.0)
-        return {
-            "messages": [m.to_wire() for m in messages],
-        }
+        events = await store.wait_for_activity(session_id, timeout=300.0)
+        wire_events = []
+        for evt in events:
+            if evt["type"] == "message":
+                wire_events.append(
+                    {"type": "message", "message": evt["message"].to_wire()}
+                )
+            else:
+                wire_events.append(evt)
+        return {"events": wire_events}
 
     @mcp.tool()
     async def get_session_status(session_id: str) -> dict:
         """Check session state: who's connected, last activity, message count."""
         from conducere.tools import get_session_status as _status
 
-        return await _status(store=store, session_id=session_id)
+        return await _status(
+            store=store,
+            session_id=session_id,
+            host=web_host,
+            port=web_port,
+        )
 
     @mcp.tool()
     async def get_catchup_summary(session_id: str, since: str | None = None) -> dict:
