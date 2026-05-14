@@ -215,7 +215,7 @@ header h1 { font-size: 1.2rem; color: #fff; }
 #join-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgb(0 0 0 / 70%);
     display: flex;
     align-items: center;
     justify-content: center;
