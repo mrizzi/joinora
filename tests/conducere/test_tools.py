@@ -64,19 +64,32 @@ class TestPostMessageTool:
 
 class TestGetSessionStatusTool:
     @pytest.mark.asyncio
-    async def test_returns_status(self, store):
+    async def test_returns_status_with_urls(self, store):
         session = store.create_session(title="Test")
-        store.add_participant(session.id, "alice")
+        token = store.add_participant(session.id, "alice")
         store.add_message(session.id, "alice", "Hi")
-        result = await get_session_status(store=store, session_id=session.id)
+        result = await get_session_status(
+            store=store,
+            session_id=session.id,
+            host="localhost",
+            port=24298,
+        )
         assert result["status"] == "active"
         assert result["message_count"] == 1
+        assert "session_url" in result
+        assert "localhost:24298" in result["session_url"]
         assert len(result["participants"]) == 1
+        assert f"token={token}" in result["participants"][0]["url"]
 
     @pytest.mark.asyncio
     async def test_nonexistent_session_raises(self, store):
         with pytest.raises(ValueError, match="not found"):
-            await get_session_status(store=store, session_id="no-such-id")
+            await get_session_status(
+                store=store,
+                session_id="no-such-id",
+                host="localhost",
+                port=24298,
+            )
 
 
 class TestGetCatchupSummaryTool:
