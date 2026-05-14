@@ -58,6 +58,16 @@ class TestSessionAPI:
         assert resp_alice.json()["current_user"] == "alice"
         assert resp_bob.json()["current_user"] == "bob"
 
+    def test_get_completed_session_without_token(self, client, store):
+        session = store.create_session(title="Done")
+        store.end_session(session.id)
+        resp = client.get(f"/api/sessions/{session.id}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "complete"
+        assert data["title"] == "Done"
+        assert "current_user" not in data
+
 
 class TestMessageAPI:
     def test_post_message(self, client, store):

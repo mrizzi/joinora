@@ -287,6 +287,23 @@ class TestJoinWakesWatch:
         assert isinstance(events[0], ParticipantJoinedEvent)
         assert events[0].name == "alice"
 
+    @pytest.mark.asyncio
+    async def test_mixed_join_and_message_events(self, store):
+        session = store.create_session(title="Test")
+
+        async def join_then_post():
+            await asyncio.sleep(0.1)
+            store.add_participant(session.id, "alice")
+            store.add_message(session.id, "alice", "Hello")
+
+        asyncio.create_task(join_then_post())
+        events = await store.wait_for_activity(session.id, timeout=2.0)
+        assert len(events) >= 2
+        assert isinstance(events[0], ParticipantJoinedEvent)
+        assert isinstance(events[1], MessageEvent)
+        assert events[0].name == "alice"
+        assert events[1].message.text == "Hello"
+
 
 class TestAgentStateCallback:
     @pytest.mark.asyncio
@@ -443,6 +460,30 @@ class TestStartupLoading:
         loaded = store2.get_session(session.id)
         assert loaded.status == SessionStatus.COMPLETE
 
+    @pytest.mark.asyncio
+    async def test_loaded_session_supports_wait_for_activity(self, tmp_path):
+        store1 = SessionStore(repo_path=tmp_path)
+        session = store1.create_session(title="Test")
+
+        store2 = SessionStore(repo_path=tmp_path)
+
+        async def join_after_delay():
+            await asyncio.sleep(0.1)
+            store2.add_participant(session.id, "alice")
+
+        asyncio.create_task(join_after_delay())
+        events = await store2.wait_for_activity(session.id, timeout=2.0)
+        assert len(events) >= 1
+        assert isinstance(events[0], ParticipantJoinedEvent)
+
+    def test_loaded_session_without_tokens_allows_join(self, tmp_path):
+        store1 = SessionStore(repo_path=tmp_path)
+        session = store1.create_session(title="No participants yet")
+
+        store2 = SessionStore(repo_path=tmp_path)
+        token = store2.add_participant(session.id, "alice")
+        assert store2.authenticate(session.id, token) == "alice"
+
 
 class TestListAllSessions:
     def test_returns_all_sessions(self, store):
@@ -487,3 +528,10 @@ class TestReopenSession:
         store.reopen_session(session.id)
         content = store._git.read_file(f"sessions/{session.id}/session.json")
         assert '"active"' in content
+
+    def test_reopen_allows_new_participants(self, store):
+        session = store.create_session(title="Test")
+        store.end_session(session.id)
+        store.reopen_session(session.id)
+        token = store.add_participant(session.id, "alice")
+        assert store.authenticate(session.id, token) == "alice"
