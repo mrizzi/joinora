@@ -7,9 +7,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from conducere.models import AgentState, ParticipantName
-from conducere.ws_manager import WebSocketManager
-from conducere.session_store import SessionStore
+from joinora.models import AgentState, ParticipantName
+from joinora.ws_manager import WebSocketManager
+from joinora.session_store import SessionStore
 
 
 class PostMessageRequest(BaseModel):

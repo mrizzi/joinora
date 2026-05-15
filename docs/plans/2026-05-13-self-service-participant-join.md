@@ -15,8 +15,8 @@
 ### Task 1: Event model + add_participant in SessionStore
 
 **Files:**
-- Modify: `conducere/session_store.py`
-- Test: `tests/conducere/test_session_store.py`
+- Modify: `joinora/session_store.py`
+- Test: `tests/joinora/test_session_store.py`
 
 This task changes `_pending` from `list[Message]` to `list[dict]` (event dicts),
 updates `add_message` / `wait_for_activity` to use events, and adds
@@ -24,7 +24,7 @@ updates `add_message` / `wait_for_activity` to use events, and adds
 
 - [ ] **Step 1: Write failing tests for add_participant**
 
-Add a new `TestAddParticipant` class to `tests/conducere/test_session_store.py`:
+Add a new `TestAddParticipant` class to `tests/joinora/test_session_store.py`:
 
 ```python
 class TestAddParticipant:
@@ -163,14 +163,14 @@ class TestJoinWakesWatch:
 
 - [ ] **Step 3: Run tests to verify they fail**
 
-Run: `python3 -m pytest tests/conducere/test_session_store.py -v -x 2>&1 | tail -20`
+Run: `python3 -m pytest tests/joinora/test_session_store.py -v -x 2>&1 | tail -20`
 
 Expected: FAIL — `add_participant`, `get_participant_tokens` not defined; existing
 `wait_for_activity` tests fail on return format.
 
 - [ ] **Step 4: Implement event model + add_participant**
 
-In `conducere/session_store.py`, make these changes:
+In `joinora/session_store.py`, make these changes:
 
 1. Change `_pending` type annotation in `__init__` (line 24):
 
@@ -263,14 +263,14 @@ use event format (the assertion at the end):
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `python3 -m pytest tests/conducere/test_session_store.py -v 2>&1 | tail -30`
+Run: `python3 -m pytest tests/joinora/test_session_store.py -v 2>&1 | tail -30`
 
 Expected: all pass.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add conducere/session_store.py tests/conducere/test_session_store.py
+git add joinora/session_store.py tests/joinora/test_session_store.py
 git commit -m "feat: add event model + add_participant to SessionStore"
 ```
 
@@ -279,14 +279,14 @@ git commit -m "feat: add event model + add_participant to SessionStore"
 ### Task 2: Remove participant_names from create_session
 
 **Files:**
-- Modify: `conducere/session_store.py:49-80`
-- Modify: `conducere/tools.py:7-25`
-- Modify: `conducere/server.py:28-43`
-- Modify: `conducere/web.py:55-74`
-- Modify: `tests/conducere/test_session_store.py`
-- Modify: `tests/conducere/test_tools.py`
-- Modify: `tests/conducere/test_web.py`
-- Modify: `tests/conducere/test_integration.py`
+- Modify: `joinora/session_store.py:49-80`
+- Modify: `joinora/tools.py:7-25`
+- Modify: `joinora/server.py:28-43`
+- Modify: `joinora/web.py:55-74`
+- Modify: `tests/joinora/test_session_store.py`
+- Modify: `tests/joinora/test_tools.py`
+- Modify: `tests/joinora/test_web.py`
+- Modify: `tests/joinora/test_integration.py`
 
 This is a large mechanical refactor. `create_session` drops `participant_names`,
 its return type changes from `tuple[Session, dict]` to `Session`, and every caller
@@ -294,7 +294,7 @@ and test is updated to use `add_participant` instead.
 
 - [ ] **Step 1: Update SessionStore.create_session**
 
-Replace `create_session` in `conducere/session_store.py` (lines 49-80):
+Replace `create_session` in `joinora/session_store.py` (lines 49-80):
 
 ```python
     def create_session(self, title: str) -> Session:
@@ -320,7 +320,7 @@ Replace `create_session` in `conducere/session_store.py` (lines 49-80):
 
 - [ ] **Step 2: Update tools.create_session**
 
-Replace in `conducere/tools.py` (lines 7-25):
+Replace in `joinora/tools.py` (lines 7-25):
 
 ```python
 async def create_session(
@@ -339,14 +339,14 @@ async def create_session(
 
 - [ ] **Step 3: Update server.py MCP tool**
 
-Replace in `conducere/server.py` (lines 28-43):
+Replace in `joinora/server.py` (lines 28-43):
 
 ```python
     @mcp.tool()
     async def create_session(title: str) -> dict:
         """Create a new collaborative session. Returns session_id and
         a session_url to share with participants."""
-        from conducere.tools import create_session as _create
+        from joinora.tools import create_session as _create
 
         return await _create(
             store=store,
@@ -358,7 +358,7 @@ Replace in `conducere/server.py` (lines 28-43):
 
 - [ ] **Step 4: Update test_session_store.py**
 
-Apply these changes throughout `tests/conducere/test_session_store.py`:
+Apply these changes throughout `tests/joinora/test_session_store.py`:
 
 **Pattern A** — change destructuring (most tests):
 `session, _ = store.create_session(title="Test")` becomes `session = store.create_session(title="Test")`
@@ -416,7 +416,7 @@ class TestUpdateLastSeen:
 
 - [ ] **Step 5: Update test_tools.py**
 
-In `tests/conducere/test_tools.py`:
+In `tests/joinora/test_tools.py`:
 
 Rewrite `TestCreateSessionTool`:
 
@@ -463,7 +463,7 @@ class TestGetSessionStatusTool:
 
 - [ ] **Step 6: Update test_web.py**
 
-In `tests/conducere/test_web.py`, every test that uses `participant_names` must
+In `tests/joinora/test_web.py`, every test that uses `participant_names` must
 switch to `add_participant`. Here is the full updated file:
 
 ```python
@@ -473,8 +473,8 @@ import threading
 import pytest
 from fastapi.testclient import TestClient
 
-from conducere.session_store import SessionStore
-from conducere.web import create_web_app
+from joinora.session_store import SessionStore
+from joinora.web import create_web_app
 
 
 @pytest.fixture
@@ -690,7 +690,7 @@ class TestAgentStateWebSocket:
 
 - [ ] **Step 7: Update web.py — allow unauthenticated session info**
 
-Replace `get_session` endpoint in `conducere/web.py` (lines 55-74):
+Replace `get_session` endpoint in `joinora/web.py` (lines 55-74):
 
 ```python
     @app.get("/api/sessions/{session_id}")
@@ -734,8 +734,8 @@ import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
-from conducere.server import create_server
-from conducere.web import create_web_app
+from joinora.server import create_server
+from joinora.web import create_web_app
 
 
 @pytest.fixture
@@ -753,7 +753,7 @@ class TestFullFlow:
     async def test_agent_creates_session_participant_joins_and_posts(self, setup):
         server, store, client = setup
 
-        from conducere.tools import create_session, post_message
+        from joinora.tools import create_session, post_message
 
         result = await create_session(
             store=store,
@@ -791,7 +791,7 @@ class TestFullFlow:
     async def test_watch_session_receives_participant_message(self, setup):
         server, store, client = setup
 
-        from conducere.tools import create_session
+        from joinora.tools import create_session
 
         result = await create_session(
             store=store,
@@ -817,7 +817,7 @@ class TestFullFlow:
     async def test_session_lifecycle(self, setup):
         server, store, client = setup
 
-        from conducere.tools import (
+        from joinora.tools import (
             create_session,
             end_session,
             get_session_status,
@@ -851,7 +851,7 @@ Expected: all tests pass.
 - [ ] **Step 10: Commit**
 
 ```bash
-git add conducere/session_store.py conducere/tools.py conducere/server.py conducere/web.py tests/
+git add joinora/session_store.py joinora/tools.py joinora/server.py joinora/web.py tests/
 git commit -m "refactor: remove participant_names from create_session, use add_participant"
 ```
 
@@ -860,15 +860,15 @@ git commit -m "refactor: remove participant_names from create_session, use add_p
 ### Task 3: Startup loading in SessionStore
 
 **Files:**
-- Modify: `conducere/session_store.py`
-- Test: `tests/conducere/test_session_store.py`
+- Modify: `joinora/session_store.py`
+- Test: `tests/joinora/test_session_store.py`
 
 `SessionStore.__init__` loads all sessions, messages, and tokens from the git
 repo so sessions survive server restarts.
 
 - [ ] **Step 1: Write failing tests**
 
-Add to `tests/conducere/test_session_store.py`:
+Add to `tests/joinora/test_session_store.py`:
 
 ```python
 class TestStartupLoading:
@@ -920,14 +920,14 @@ class TestStartupLoading:
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python3 -m pytest tests/conducere/test_session_store.py::TestStartupLoading -v`
+Run: `python3 -m pytest tests/joinora/test_session_store.py::TestStartupLoading -v`
 
 Expected: FAIL — `store2.get_session()` returns None because sessions aren't loaded
 on startup.
 
 - [ ] **Step 3: Implement startup loading**
 
-Add `_load_from_git` method to `SessionStore` in `conducere/session_store.py`, and
+Add `_load_from_git` method to `SessionStore` in `joinora/session_store.py`, and
 call it at the end of `__init__`:
 
 At the end of `__init__`, after `self.on_agent_state_change = None`, add:
@@ -962,14 +962,14 @@ Add the method after `__init__`:
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `python3 -m pytest tests/conducere/test_session_store.py -v 2>&1 | tail -30`
+Run: `python3 -m pytest tests/joinora/test_session_store.py -v 2>&1 | tail -30`
 
 Expected: all pass.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add conducere/session_store.py tests/conducere/test_session_store.py
+git add joinora/session_store.py tests/joinora/test_session_store.py
 git commit -m "feat: load sessions, messages, and tokens from git on startup"
 ```
 
@@ -978,18 +978,18 @@ git commit -m "feat: load sessions, messages, and tokens from git on startup"
 ### Task 4: New MCP tools — list_sessions + reopen_session
 
 **Files:**
-- Modify: `conducere/session_store.py`
-- Modify: `conducere/tools.py`
-- Modify: `conducere/server.py`
-- Test: `tests/conducere/test_session_store.py`
-- Test: `tests/conducere/test_tools.py`
+- Modify: `joinora/session_store.py`
+- Modify: `joinora/tools.py`
+- Modify: `joinora/server.py`
+- Test: `tests/joinora/test_session_store.py`
+- Test: `tests/joinora/test_tools.py`
 
 Adds `list_all_sessions()` and `reopen_session()` to `SessionStore`, tool functions
 in `tools.py`, and MCP wrappers in `server.py`.
 
 - [ ] **Step 1: Write failing tests for SessionStore methods**
 
-Add to `tests/conducere/test_session_store.py`:
+Add to `tests/joinora/test_session_store.py`:
 
 ```python
 class TestListAllSessions:
@@ -1039,13 +1039,13 @@ class TestReopenSession:
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python3 -m pytest tests/conducere/test_session_store.py::TestListAllSessions tests/conducere/test_session_store.py::TestReopenSession -v`
+Run: `python3 -m pytest tests/joinora/test_session_store.py::TestListAllSessions tests/joinora/test_session_store.py::TestReopenSession -v`
 
 Expected: FAIL — methods not defined.
 
 - [ ] **Step 3: Implement SessionStore methods**
 
-Add to `conducere/session_store.py`, after `get_session`:
+Add to `joinora/session_store.py`, after `get_session`:
 
 ```python
     def list_all_sessions(self) -> list[Session]:
@@ -1069,16 +1069,16 @@ Add after `end_session`:
 
 - [ ] **Step 4: Run SessionStore tests**
 
-Run: `python3 -m pytest tests/conducere/test_session_store.py -v 2>&1 | tail -20`
+Run: `python3 -m pytest tests/joinora/test_session_store.py -v 2>&1 | tail -20`
 
 Expected: all pass.
 
 - [ ] **Step 5: Write failing tests for tool functions**
 
-Add to `tests/conducere/test_tools.py`:
+Add to `tests/joinora/test_tools.py`:
 
 ```python
-from conducere.tools import list_sessions, reopen_session
+from joinora.tools import list_sessions, reopen_session
 
 
 class TestListSessionsTool:
@@ -1121,7 +1121,7 @@ class TestReopenSessionTool:
 
 - [ ] **Step 6: Implement tool functions**
 
-Add to `conducere/tools.py`:
+Add to `joinora/tools.py`:
 
 ```python
 async def list_sessions(
@@ -1169,21 +1169,21 @@ async def reopen_session(store: SessionStore, session_id: str) -> dict:
 
 - [ ] **Step 7: Add MCP wrappers in server.py**
 
-Add after the `end_session` MCP tool in `conducere/server.py`:
+Add after the `end_session` MCP tool in `joinora/server.py`:
 
 ```python
     @mcp.tool()
     async def list_sessions() -> dict:
         """List all sessions (active and complete) with participant URLs.
         Use to discover existing sessions after agent reconnection."""
-        from conducere.tools import list_sessions as _list
+        from joinora.tools import list_sessions as _list
 
         return await _list(store=store, host=web_host, port=web_port)
 
     @mcp.tool()
     async def reopen_session(session_id: str) -> dict:
         """Reopen a completed session, changing its status back to active."""
-        from conducere.tools import reopen_session as _reopen
+        from joinora.tools import reopen_session as _reopen
 
         return await _reopen(store=store, session_id=session_id)
 ```
@@ -1197,7 +1197,7 @@ Expected: all pass.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add conducere/session_store.py conducere/tools.py conducere/server.py tests/
+git add joinora/session_store.py joinora/tools.py joinora/server.py tests/
 git commit -m "feat: add list_sessions and reopen_session tools"
 ```
 
@@ -1206,16 +1206,16 @@ git commit -m "feat: add list_sessions and reopen_session tools"
 ### Task 5: Update get_session_status + watch_session in server.py
 
 **Files:**
-- Modify: `conducere/tools.py`
-- Modify: `conducere/server.py:70-78`
-- Test: `tests/conducere/test_tools.py`
+- Modify: `joinora/tools.py`
+- Modify: `joinora/server.py:70-78`
+- Test: `tests/joinora/test_tools.py`
 
 `get_session_status` gains URLs with participant tokens. `watch_session` returns
 `{ events: [...] }` instead of `{ messages: [...] }`.
 
 - [ ] **Step 1: Write failing tests for updated get_session_status**
 
-Update `TestGetSessionStatusTool` in `tests/conducere/test_tools.py`:
+Update `TestGetSessionStatusTool` in `tests/joinora/test_tools.py`:
 
 ```python
 class TestGetSessionStatusTool:
@@ -1250,13 +1250,13 @@ class TestGetSessionStatusTool:
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python3 -m pytest tests/conducere/test_tools.py::TestGetSessionStatusTool -v`
+Run: `python3 -m pytest tests/joinora/test_tools.py::TestGetSessionStatusTool -v`
 
 Expected: FAIL — `get_session_status()` doesn't accept host/port.
 
 - [ ] **Step 3: Update get_session_status in tools.py**
 
-Replace `get_session_status` in `conducere/tools.py`:
+Replace `get_session_status` in `joinora/tools.py`:
 
 ```python
 async def get_session_status(
@@ -1291,13 +1291,13 @@ async def get_session_status(
 
 - [ ] **Step 4: Update get_session_status MCP wrapper in server.py**
 
-Replace in `conducere/server.py`:
+Replace in `joinora/server.py`:
 
 ```python
     @mcp.tool()
     async def get_session_status(session_id: str) -> dict:
         """Check session state: who's connected, last activity, message count."""
-        from conducere.tools import get_session_status as _status
+        from joinora.tools import get_session_status as _status
 
         return await _status(
             store=store,
@@ -1309,7 +1309,7 @@ Replace in `conducere/server.py`:
 
 - [ ] **Step 5: Update watch_session MCP tool in server.py**
 
-Replace the `watch_session` MCP tool in `conducere/server.py`:
+Replace the `watch_session` MCP tool in `joinora/server.py`:
 
 ```python
     @mcp.tool(task=True)
@@ -1338,7 +1338,7 @@ Expected: all pass.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add conducere/tools.py conducere/server.py tests/conducere/test_tools.py
+git add joinora/tools.py joinora/server.py tests/joinora/test_tools.py
 git commit -m "feat: add URLs to get_session_status, event format to watch_session"
 ```
 
@@ -1347,14 +1347,14 @@ git commit -m "feat: add URLs to get_session_status, event format to watch_sessi
 ### Task 6: Web join endpoint
 
 **Files:**
-- Modify: `conducere/web.py`
-- Test: `tests/conducere/test_web.py`
+- Modify: `joinora/web.py`
+- Test: `tests/joinora/test_web.py`
 
 Adds `POST /api/sessions/{session_id}/join` for self-service participant join.
 
 - [ ] **Step 1: Write failing tests**
 
-Add to `tests/conducere/test_web.py`:
+Add to `tests/joinora/test_web.py`:
 
 ```python
 class TestJoinAPI:
@@ -1446,13 +1446,13 @@ class TestJoinAPI:
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python3 -m pytest tests/conducere/test_web.py::TestJoinAPI -v`
+Run: `python3 -m pytest tests/joinora/test_web.py::TestJoinAPI -v`
 
 Expected: FAIL — 404 because the endpoint doesn't exist.
 
 - [ ] **Step 3: Implement the join endpoint**
 
-Add a request model and endpoint to `conducere/web.py`.
+Add a request model and endpoint to `joinora/web.py`.
 
 Add after the `PostMessageRequest` class:
 
@@ -1487,7 +1487,7 @@ Add the endpoint inside `create_web_app`, after the `post_message` endpoint:
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `python3 -m pytest tests/conducere/test_web.py -v 2>&1 | tail -30`
+Run: `python3 -m pytest tests/joinora/test_web.py -v 2>&1 | tail -30`
 
 Expected: all pass.
 
@@ -1500,7 +1500,7 @@ Expected: all pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add conducere/web.py tests/conducere/test_web.py
+git add joinora/web.py tests/joinora/test_web.py
 git commit -m "feat: add POST /api/sessions/{id}/join endpoint"
 ```
 
@@ -1509,16 +1509,16 @@ git commit -m "feat: add POST /api/sessions/{id}/join endpoint"
 ### Task 7: Frontend — localStorage + join overlay
 
 **Files:**
-- Modify: `conducere/frontend/index.html`
-- Modify: `conducere/frontend/style.css`
-- Modify: `conducere/frontend/app.js`
+- Modify: `joinora/frontend/index.html`
+- Modify: `joinora/frontend/style.css`
+- Modify: `joinora/frontend/app.js`
 
 Switch from `sessionStorage` to `localStorage`. Add a join overlay when no token
 is present. Remove read-only observer mode.
 
 - [ ] **Step 1: Add join overlay HTML**
 
-Add the join overlay `div` to `conducere/frontend/index.html`, right after the
+Add the join overlay `div` to `joinora/frontend/index.html`, right after the
 opening `<div id="app">` and before `<header>`:
 
 ```html
@@ -1537,7 +1537,7 @@ opening `<div id="app">` and before `<header>`:
 
 - [ ] **Step 2: Add join overlay CSS**
 
-Append to `conducere/frontend/style.css`:
+Append to `joinora/frontend/style.css`:
 
 ```css
 /* Join overlay */
@@ -1613,7 +1613,7 @@ Append to `conducere/frontend/style.css`:
 
 - [ ] **Step 3: Rewrite app.js with localStorage + join flow**
 
-Replace `conducere/frontend/app.js` entirely. Key changes from the existing file:
+Replace `joinora/frontend/app.js` entirely. Key changes from the existing file:
 
 1. `sessionStorage` → `localStorage` (2 occurrences: setItem, getItem)
 2. New DOM references for join overlay elements
@@ -1954,7 +1954,7 @@ Run: `python3 test_local.py` (or start the server manually)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add conducere/frontend/
+git add joinora/frontend/
 git commit -m "feat: add join overlay, switch to localStorage"
 ```
 
@@ -1963,20 +1963,20 @@ git commit -m "feat: add join overlay, switch to localStorage"
 ### Task 8: Skill file updates
 
 **Files:**
-- Modify: `skill/skills/conducere/SKILL.md`
-- Modify: `skill/conducere.md`
+- Modify: `skill/skills/joinora/SKILL.md`
+- Modify: `skill/joinora.md`
 
 Update the adapter skill to reflect the new `create_session` (no participant names),
 event-based `watch_session`, and new tools.
 
 - [ ] **Step 1: Update SKILL.md**
 
-Replace the Setup section in `skill/skills/conducere/SKILL.md`:
+Replace the Setup section in `skill/skills/joinora/SKILL.md`:
 
 ```markdown
 ## Setup
 
-1. Call the Conducere MCP tool `create_session` with a descriptive
+1. Call the Joinora MCP tool `create_session` with a descriptive
    title based on the target skill.
 2. Present the session URL to the coordinator:
    > "Share this link with participants: **{session_url}**"
@@ -2005,9 +2005,9 @@ Update the Monitoring section to reflect event-based watch:
   participant URLs with tokens for re-sharing.
 ```
 
-- [ ] **Step 2: Update conducere.md (root-level copy)**
+- [ ] **Step 2: Update joinora.md (root-level copy)**
 
-Apply the same changes to `skill/conducere.md` — it has identical content.
+Apply the same changes to `skill/joinora.md` — it has identical content.
 
 - [ ] **Step 3: Commit**
 

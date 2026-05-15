@@ -153,7 +153,7 @@ to the thread, textarea enabled.
 
 ### Skill File Update
 
-The `/conducere` adapter skill (`SKILL.md` and `conducere.md`) must
+The `/joinora` adapter skill (`SKILL.md` and `joinora.md`) must
 be updated:
 - `create_session` no longer takes participant names
 - The session URL is the invite link to share

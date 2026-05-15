@@ -5,8 +5,8 @@ from pathlib import Path
 
 from fastmcp import FastMCP
 
-from conducere.models import MessageEvent, ParticipantJoinedEvent
-from conducere.session_store import SessionStore
+from joinora.models import MessageEvent, ParticipantJoinedEvent
+from joinora.session_store import SessionStore
 
 
 def create_server(
@@ -15,12 +15,12 @@ def create_server(
     web_port: int = 24298,
 ) -> FastMCP:
     if repo_path is None:
-        repo_path = Path(tempfile.mkdtemp(prefix="conducere-"))
+        repo_path = Path(tempfile.mkdtemp(prefix="joinora-"))
     store = SessionStore(repo_path=repo_path)
     mcp = FastMCP(
-        "Conducere",
+        "Joinora",
         instructions=(
-            "Conducere is a collaborative skill runtime. "
+            "Joinora is a collaborative skill runtime. "
             "Use these tools to run interactive, multi-user sessions "
             "where participants contribute via a shared web UI."
         ),
@@ -30,7 +30,7 @@ def create_server(
     async def create_session(title: str) -> dict:
         """Create a new collaborative session. Returns session_id and
         a session_url to share with participants."""
-        from conducere.tools import create_session as _create
+        from joinora.tools import create_session as _create
 
         return await _create(
             store=store,
@@ -46,7 +46,7 @@ def create_server(
         metadata: dict[str, str] | None = None,
     ) -> dict:
         """Post an AI message visible to all participants in the session."""
-        from conducere.tools import post_message as _post
+        from joinora.tools import post_message as _post
 
         result = await _post(
             store=store,
@@ -88,7 +88,7 @@ def create_server(
     @mcp.tool()
     async def get_session_status(session_id: str) -> dict:
         """Check session state: who's connected, last activity, message count."""
-        from conducere.tools import get_session_status as _status
+        from joinora.tools import get_session_status as _status
 
         return await _status(
             store=store,
@@ -100,14 +100,14 @@ def create_server(
     @mcp.tool()
     async def get_catchup_summary(session_id: str, since: str | None = None) -> dict:
         """Get messages since a timestamp for catch-up summary generation."""
-        from conducere.tools import get_catchup_summary as _catchup
+        from joinora.tools import get_catchup_summary as _catchup
 
         return await _catchup(store=store, session_id=session_id, since=since)
 
     @mcp.tool()
     async def end_session(session_id: str) -> dict:
         """Mark a session as complete and return the conversation record."""
-        from conducere.tools import end_session as _end
+        from joinora.tools import end_session as _end
 
         return await _end(store=store, session_id=session_id)
 
@@ -115,14 +115,14 @@ def create_server(
     async def list_sessions() -> dict:
         """List all sessions (active and complete) with participant URLs.
         Use to discover existing sessions after agent reconnection."""
-        from conducere.tools import list_sessions as _list
+        from joinora.tools import list_sessions as _list
 
         return await _list(store=store, host=web_host, port=web_port)
 
     @mcp.tool()
     async def reopen_session(session_id: str) -> dict:
         """Reopen a completed session, changing its status back to active."""
-        from conducere.tools import reopen_session as _reopen
+        from joinora.tools import reopen_session as _reopen
 
         return await _reopen(store=store, session_id=session_id)
 
@@ -134,7 +134,7 @@ def create_server(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Conducere MCP Server")
+    parser = argparse.ArgumentParser(description="Joinora MCP Server")
     parser.add_argument(
         "--repo-path",
         type=Path,
@@ -166,7 +166,7 @@ def main():
         web_port=args.web_port,
     )
 
-    from conducere.web import create_web_app
+    from joinora.web import create_web_app
 
     web_app = create_web_app(store=server._store)
     server._web_app = web_app

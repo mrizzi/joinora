@@ -1,12 +1,12 @@
 # Agent Status Indicator
 
-Visual indicators in the Conducere web UI showing whether the agent is
+Visual indicators in the Joinora web UI showing whether the agent is
 listening (connected via MCP `watch_session`), processing a reply, or
 disconnected.
 
 ## Problem
 
-Participants in a Conducere session have no visibility into whether the
+Participants in a Joinora session have no visibility into whether the
 agent is connected or working. After posting a message, they see nothing
 until the agent's reply appears — no feedback on whether anyone is
 listening.
@@ -120,11 +120,11 @@ wait_for_activity() times out (300s)
 
 | File | Change |
 |---|---|
-| `conducere/session_store.py` | Add `on_agent_state_change` callback. Invoke at entry/exit of `wait_for_activity()`. |
-| `conducere/server.py` | Wire callback to `ws_manager.broadcast()` at startup. |
-| `conducere/frontend/index.html` | Add `.agent-dot` element in header. |
-| `conducere/frontend/style.css` | Styles for `.agent-dot` states, `#agent-typing`, `@keyframes` for pulse and bar animations. |
-| `conducere/frontend/app.js` | Handle `agent_listening`, `agent_processing`, `agent_disconnected` WebSocket events. Manage dot class and typing indicator lifecycle. |
-| `tests/conducere/` | Tests for callback invocation in `wait_for_activity` and WebSocket event broadcasting. |
+| `joinora/session_store.py` | Add `on_agent_state_change` callback. Invoke at entry/exit of `wait_for_activity()`. |
+| `joinora/server.py` | Wire callback to `ws_manager.broadcast()` at startup. |
+| `joinora/frontend/index.html` | Add `.agent-dot` element in header. |
+| `joinora/frontend/style.css` | Styles for `.agent-dot` states, `#agent-typing`, `@keyframes` for pulse and bar animations. |
+| `joinora/frontend/app.js` | Handle `agent_listening`, `agent_processing`, `agent_disconnected` WebSocket events. Manage dot class and typing indicator lifecycle. |
+| `tests/joinora/` | Tests for callback invocation in `wait_for_activity` and WebSocket event broadcasting. |
 
 No new files. No changes to MCP tools or Pydantic models.

@@ -4,8 +4,8 @@ import threading
 import pytest
 from fastapi.testclient import TestClient
 
-from conducere.session_store import SessionStore
-from conducere.web import create_web_app
+from joinora.session_store import SessionStore
+from joinora.web import create_web_app
 
 
 @pytest.fixture

@@ -3,9 +3,9 @@ import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
-from conducere.models import MessageEvent
-from conducere.server import create_server
-from conducere.web import create_web_app
+from joinora.models import MessageEvent
+from joinora.server import create_server
+from joinora.web import create_web_app
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ class TestFullFlow:
     async def test_agent_creates_session_posts_question_receives_answer(self, setup):
         server, store, client = setup
 
-        from conducere.tools import create_session, post_message
+        from joinora.tools import create_session, post_message
 
         result = await create_session(
             store=store,
@@ -64,7 +64,7 @@ class TestFullFlow:
     async def test_watch_session_receives_participant_message(self, setup):
         server, store, client = setup
 
-        from conducere.tools import create_session
+        from joinora.tools import create_session
 
         result = await create_session(
             store=store,
@@ -92,7 +92,7 @@ class TestFullFlow:
     async def test_session_lifecycle(self, setup):
         server, store, client = setup
 
-        from conducere.tools import (
+        from joinora.tools import (
             create_session,
             end_session,
             get_session_status,

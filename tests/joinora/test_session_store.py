@@ -3,13 +3,13 @@ from datetime import datetime, timezone
 
 import pytest
 
-from conducere.models import (
+from joinora.models import (
     AgentState,
     MessageEvent,
     ParticipantJoinedEvent,
     SessionStatus,
 )
-from conducere.session_store import SessionStore
+from joinora.session_store import SessionStore
 
 
 @pytest.fixture

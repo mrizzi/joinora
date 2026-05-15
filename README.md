@@ -1,12 +1,12 @@
-# Conducere
+# Joinora
 
 Collaborative multi-user runtime for structured prompt/skill execution.
 
 **The skill controls the agenda; participants control the content.**
 
-Conducere lets any coding agent (Claude Code, Cursor, Windsurf, etc.) run a skill collaboratively with multiple human participants. The agent drives the session through MCP tools while participants contribute via a shared browser-based conversation thread with real-time sync.
+Joinora lets any coding agent (Claude Code, Cursor, Windsurf, etc.) run a skill collaboratively with multiple human participants. The agent drives the session through MCP tools while participants contribute via a shared browser-based conversation thread with real-time sync.
 
-**BYOS — Bring Your Own Skill.** Any existing skill works without modification. Conducere wraps it with interaction rules that route I/O through a shared session.
+**BYOS — Bring Your Own Skill.** Any existing skill works without modification. Joinora wraps it with interaction rules that route I/O through a shared session.
 
 ---
 
@@ -19,7 +19,7 @@ Conducere lets any coding agent (Claude Code, Cursor, Windsurf, etc.) run a skil
                     └──────────┬───────────┘
                                │ MCP Tools
                     ┌──────────▼───────────┐
-                    │      Conducere       │
+                    │      Joinora       │
                     │   ┌───────────────┐  │
                     │   │  MCP Server   │  │
                     │   │   (FastMCP)   │  │
@@ -54,27 +54,27 @@ A single process runs two interfaces sharing state:
 
 ## MCP Spec Features
 
-Conducere is built on [FastMCP](https://gofastmcp.com) and exercises two recent additions to the [Model Context Protocol](https://modelcontextprotocol.io) specification that are central to how it works.
+Joinora is built on [FastMCP](https://gofastmcp.com) and exercises two recent additions to the [Model Context Protocol](https://modelcontextprotocol.io) specification that are central to how it works.
 
 ### Streamable HTTP Transport
 
 Introduced in the [2025-03-26 spec revision](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), Streamable HTTP replaces the deprecated SSE transport with a single-endpoint design. One URL handles everything: `POST` for client-to-server JSON-RPC messages, `GET` for optional server-initiated SSE streams, and `DELETE` for session teardown.
 
-Conducere supports both `stdio` (for local agent connections) and `streamable-http` (for remote agents). Streamable HTTP matters here because Conducere is a long-lived server managing multiple concurrent sessions — the single-endpoint model works cleanly with standard HTTP infrastructure (load balancers, reverse proxies, firewalls) without the connection-management issues that plagued the old two-endpoint SSE approach.
+Joinora supports both `stdio` (for local agent connections) and `streamable-http` (for remote agents). Streamable HTTP matters here because Joinora is a long-lived server managing multiple concurrent sessions — the single-endpoint model works cleanly with standard HTTP infrastructure (load balancers, reverse proxies, firewalls) without the connection-management issues that plagued the old two-endpoint SSE approach.
 
 ```bash
 # Local agent (stdio, default)
-conducere --transport stdio
+joinora --transport stdio
 
 # Remote agent (streamable HTTP)
-conducere --transport streamable-http
+joinora --transport streamable-http
 ```
 
 ### MCP Tasks (Async Background Operations)
 
 Introduced in the [2025-11-25 spec revision](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks) as an experimental feature ([SEP-1686](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/1686)), Tasks upgrade MCP from synchronous tool calls to a call-now, fetch-later protocol. A task-augmented request returns immediately with a durable handle while the real work continues in the background.
 
-This is the mechanism that makes `watch_session` possible. Without Tasks, an MCP tool call blocks the agent until it returns — fine for instant operations, but Conducere needs to wait indefinitely for human participants to respond. `watch_session` is registered as a background task (`task=True` in FastMCP), so the agent can continue other work while the task monitors for participant activity:
+This is the mechanism that makes `watch_session` possible. Without Tasks, an MCP tool call blocks the agent until it returns — fine for instant operations, but Joinora needs to wait indefinitely for human participants to respond. `watch_session` is registered as a background task (`task=True` in FastMCP), so the agent can continue other work while the task monitors for participant activity:
 
 ```python
 @mcp.tool(task=True)
@@ -101,7 +101,7 @@ Requires Python 3.12+.
 ### Run the Server
 
 ```bash
-conducere --repo-path /path/to/data --web-port 24298
+joinora --repo-path /path/to/data --web-port 24298
 ```
 
 | Flag | Default | Description |
@@ -181,9 +181,9 @@ The web UI renders each type with distinct styling — orange borders for questi
 
 ## Adapter Skill
 
-The `/conducere` adapter skill wraps any target skill for multi-user execution. It injects interaction rules that:
+The `/joinora` adapter skill wraps any target skill for multi-user execution. It injects interaction rules that:
 
-- Route all user communication through Conducere MCP tools (`post_message`, `watch_session`)
+- Route all user communication through Joinora MCP tools (`post_message`, `watch_session`)
 - Tag messages with metadata (`type`, `section`) for structured rendering
 - Process all participant messages before responding
 - Synthesize multi-participant input into coherent responses
@@ -191,7 +191,7 @@ The `/conducere` adapter skill wraps any target skill for multi-user execution. 
 
 The adapter is a template — the target skill's content is injected at runtime via a `{target_skill_content}` placeholder.
 
-Located in `skill/skills/conducere/SKILL.md`.
+Located in `skill/skills/joinora/SKILL.md`.
 
 ---
 
@@ -257,7 +257,7 @@ ruff check .
 ### Project Structure
 
 ```
-conducere/
+joinora/
   models.py           # Pydantic models: Session, Message, Participant
   session_store.py    # Git-backed store with async subscriber notification
   tools.py            # MCP tool functions
@@ -267,8 +267,8 @@ conducere/
   ws_manager.py       # WebSocket connection manager
   frontend/           # Vanilla HTML/CSS/JS conversation thread UI
 skill/
-  skills/conducere/   # /conducere adapter skill (BYOS wrapper)
-tests/conducere/      # Tests
+  skills/joinora/   # /joinora adapter skill (BYOS wrapper)
+tests/joinora/      # Tests
 ```
 
 ### Tech Stack

@@ -32,4 +32,4 @@ jobs:
         run: pip-audit --skip-editable
 
       - name: Run bandit
-        run: bandit -r conducere/ -c pyproject.toml
+        run: bandit -r joinora/ -c pyproject.toml

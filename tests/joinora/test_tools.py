@@ -1,7 +1,7 @@
 import pytest
 
-from conducere.session_store import SessionStore
-from conducere.tools import (
+from joinora.session_store import SessionStore
+from joinora.tools import (
     create_session,
     end_session,
     get_catchup_summary,
@@ -171,7 +171,7 @@ class TestReopenSessionTool:
 
 class TestMCPServerCreation:
     def test_server_creates_with_tools(self, tmp_path):
-        from conducere.server import create_server
+        from joinora.server import create_server
 
         server = create_server(repo_path=tmp_path)
         assert server is not None

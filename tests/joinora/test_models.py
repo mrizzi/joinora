@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-from conducere.models import Message, Participant, Session, SessionStatus
+from joinora.models import Message, Participant, Session, SessionStatus
 
 
 class TestParticipant:

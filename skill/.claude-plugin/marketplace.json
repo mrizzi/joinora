@@ -1,11 +1,11 @@
 {
-  "name": "conducere",
+  "name": "joinora",
   "owner": {
     "name": "mrizzi"
   },
   "plugins": [
     {
-      "name": "conducere",
+      "name": "joinora",
       "version": "0.1.0",
       "description": "Collaborative skill runtime — run any skill with multiple participants",
       "source": "./"

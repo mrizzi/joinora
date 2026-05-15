@@ -23,10 +23,10 @@ jobs:
         run: npm install eslint @eslint/js globals stylelint stylelint-config-standard html-validate
 
       - name: Validate HTML
-        run: npx html-validate conducere/frontend/index.html
+        run: npx html-validate joinora/frontend/index.html
 
       - name: Lint JavaScript
-        run: npx eslint conducere/frontend/app.js
+        run: npx eslint joinora/frontend/app.js
 
       - name: Lint CSS
-        run: npx stylelint conducere/frontend/style.css
+        run: npx stylelint joinora/frontend/style.css

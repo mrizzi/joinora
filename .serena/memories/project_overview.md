@@ -1,7 +1,7 @@
-# Conducere — Project Overview
+# Joinora — Project Overview
 
 Collaborative multi-user runtime for structured prompt/skill execution.
-Any coding agent runs a skill through Conducere's MCP server.
+Any coding agent runs a skill through Joinora's MCP server.
 Participants join via browser and contribute content asynchronously.
 
 ## Architecture
@@ -21,7 +21,7 @@ Participants join via browser and contribute content asynchronously.
 
 ## Codebase Structure
 ```
-conducere/
+joinora/
   models.py           # Pydantic models: Session, Message, Participant
   session_store.py    # Git-backed store with async subscriber notification
   tools.py            # MCP tool functions
@@ -31,6 +31,6 @@ conducere/
   ws_manager.py       # WebSocket connection manager
   frontend/           # Vanilla HTML/CSS/JS conversation thread UI
 skill/
-  skills/conducere/   # /conducere adapter skill (BYOS wrapper)
-tests/conducere/      # ~88 tests
+  skills/joinora/   # /joinora adapter skill (BYOS wrapper)
+tests/joinora/      # ~88 tests
 ```

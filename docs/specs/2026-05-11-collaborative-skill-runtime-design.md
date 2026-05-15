@@ -1,34 +1,34 @@
-# Conducere — Collaborative Skill Runtime
+# Joinora — Collaborative Skill Runtime
 
 ## Mission
 
-Conducere is a collaborative multi-user runtime for structured
+Joinora is a collaborative multi-user runtime for structured
 prompt/skill execution. **The skill controls the agenda; participants
 control the content.**
 
 A skill like `define-feature` runs as a single-user CLI conversation
-today. Conducere turns that into a multi-user collaborative session
+today. Joinora turns that into a multi-user collaborative session
 where the skill's logic orchestrates the workflow while multiple
 participants contribute content asynchronously — with real-time sync
 and a shared conversation thread.
 
 ### BYOS (Bring Your Own Skill)
 
-Users bring any structured skill/prompt and Conducere runs it
-collaboratively. The skill is unmodified — Conducere adapts to it,
+Users bring any structured skill/prompt and Joinora runs it
+collaboratively. The skill is unmodified — Joinora adapts to it,
 not the other way around.
 
 ------------------------------------------------------------------------
 
 ## Architecture
 
-Conducere is an **MCP server** with an embedded **web UI server**
+Joinora is an **MCP server** with an embedded **web UI server**
 running as a daemon thread in the same process (following the Serena
 dashboard pattern). Two interfaces, one process, shared state.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Conducere MCP Server Process                     │
+│  Joinora MCP Server Process                     │
 │                                                     │
 │  ┌──────────────────────┐  ┌──────────────────────┐ │
 │  │ MCP Server           │  │ Web UI Server        │ │
@@ -53,7 +53,7 @@ dashboard pattern). Two interfaces, one process, shared state.
 ```
 
 **Agent side:** Any coding agent (Claude Code, Cursor, Windsurf, Codex,
-etc.) connects via MCP. The agent runs the skill and uses Conducere
+etc.) connects via MCP. The agent runs the skill and uses Joinora
 MCP tools for all participant interaction.
 
 **Participant side:** Participants open a browser URL and interact via
@@ -66,7 +66,7 @@ server-to-client event push via MCP Tasks.
 
 ## The `/draftcircle` Adapter Skill
 
-The adapter skill is the bridge between BYOS and Conducere. It is
+The adapter skill is the bridge between BYOS and Joinora. It is
 installed as a plugin/skill in the coding agent.
 
 ### Invocation
@@ -79,13 +79,13 @@ installed as a plugin/skill in the coding agent.
 ### What It Does
 
 1. Reads the target skill's markdown content (the instructions).
-2. Connects to the Conducere MCP server.
+2. Connects to the Joinora MCP server.
 3. Creates a session — gets back a session URL and ID.
 4. Presents the URL to the coordinator:
    "Share this link with participants: http://localhost:24298/session/abc123"
 5. Injects a preamble into the agent's context:
    - "You are running a collaborative session. Follow the target skill's
-     instructions, but for all user interaction, use Conducere MCP
+     instructions, but for all user interaction, use Joinora MCP
      tools: `post_message()` to communicate, `watch_session()` to
      receive participant input. Never use terminal I/O for skill
      content."
@@ -95,7 +95,7 @@ installed as a plugin/skill in the coding agent.
      you're currently working on."
 6. Appends the target skill's original instructions.
 7. The agent executes — following the skill's logic but routing all
-   interaction through Conducere.
+   interaction through Joinora.
 
 ### What It Does NOT Do
 
@@ -104,7 +104,7 @@ installed as a plugin/skill in the coding agent.
 - Modify the target skill's instructions.
 
 It is purely an I/O redirect: "follow these instructions, but talk
-through Conducere instead of the terminal."
+through Joinora instead of the terminal."
 
 ------------------------------------------------------------------------
 
@@ -189,7 +189,7 @@ Suggested metadata fields:
 
 ## Session Model
 
-Flat and simple. Conducere does not model the skill's structure —
+Flat and simple. Joinora does not model the skill's structure —
 sections, approval gates, and workflow logic are the skill's concern.
 
 ### Session
@@ -218,7 +218,7 @@ sections, approval gates, and workflow logic are the skill's concern.
 
 ### Persistence
 
-All session data is persisted via git commits (existing Conducere
+All session data is persisted via git commits (existing Joinora
 pattern). Every message is a commit with a semantic message.
 
 ------------------------------------------------------------------------
@@ -266,9 +266,9 @@ in the thread (posting AI messages).
 
 ------------------------------------------------------------------------
 
-## What Conducere Provides vs. What the Skill Provides
+## What Joinora Provides vs. What the Skill Provides
 
-| Concern | Conducere | Skill |
+| Concern | Joinora | Skill |
 |---------|-------------|-------|
 | Multi-user input | Yes — comment thread | — |
 | Real-time sync | Yes — WebSocket | — |
@@ -283,9 +283,9 @@ in the thread (posting AI messages).
 
 ------------------------------------------------------------------------
 
-## Relationship to Current Conducere
+## Relationship to Current Joinora
 
-This design represents a significant evolution of Conducere's
+This design represents a significant evolution of Joinora's
 architecture. The current system has an internal AI orchestrator,
 structured templates with sections, proposal accept/reject workflow,
 and output plugins.
@@ -294,7 +294,7 @@ and output plugins.
 
 - **AI orchestrator** — removed (or optional). The agent running the
   skill provides all AI capabilities.
-- **Templates** — no longer needed as a Conducere concept. The skill
+- **Templates** — no longer needed as a Joinora concept. The skill
   defines the structure.
 - **Sections** — removed from the data model. The skill manages
   structure through conversation and metadata.
@@ -315,7 +315,7 @@ and output plugins.
 
 ### Migration Path
 
-The current Conducere can continue to work for template-driven
+The current Joinora can continue to work for template-driven
 sessions. The new skill-driven mode is an addition, not a replacement.
 Over time, template-driven sessions could be expressed as skills,
 converging on a single model.

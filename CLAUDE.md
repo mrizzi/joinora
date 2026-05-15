@@ -1,10 +1,10 @@
-# Conducere
+# Joinora
 
 Collaborative multi-user runtime for structured prompt/skill execution.
 **The skill controls the agenda; participants control the content.**
 
 Any coding agent (Claude Code, Cursor, Windsurf, etc.) runs a skill
-through Conducere's MCP server. Participants join via browser and
+through Joinora's MCP server. Participants join via browser and
 contribute content asynchronously. BYOS — Bring Your Own Skill.
 
 ------------------------------------------------------------------------
@@ -21,7 +21,7 @@ Two interfaces, one process, shared state:
   Every mutation is a git commit.
 
 ```
-conducere/
+joinora/
   models.py           # Pydantic models: Session, Message, Participant
   session_store.py    # Git-backed store with async subscriber notification
   tools.py            # MCP tool functions
@@ -31,8 +31,8 @@ conducere/
   ws_manager.py       # WebSocket connection manager
   frontend/           # Vanilla HTML/CSS/JS conversation thread UI
 skill/
-  skills/conducere/   # /conducere adapter skill (BYOS wrapper)
-tests/conducere/      # 65 tests
+  skills/joinora/   # /joinora adapter skill (BYOS wrapper)
+tests/joinora/      # 65 tests
 ```
 
 ------------------------------------------------------------------------
@@ -47,8 +47,8 @@ tests/conducere/      # 65 tests
   in SessionStore (never serialized to git).
 - **MCP Tasks** — `watch_session` runs as an async background task,
   returning when participants post messages.
-- **Adapter Skill** — `/conducere` wraps any target skill with
-  interaction rules that route I/O through Conducere MCP tools.
+- **Adapter Skill** — `/joinora` wraps any target skill with
+  interaction rules that route I/O through Joinora MCP tools.
 
 ------------------------------------------------------------------------
 
@@ -72,7 +72,7 @@ tests/conducere/      # 65 tests
 pip install -e ".[dev]"
 
 # Run the MCP server (starts web UI on daemon thread)
-conducere --repo-path /path/to/data --web-port 24298
+joinora --repo-path /path/to/data --web-port 24298
 
 # Run tests
 pytest tests/

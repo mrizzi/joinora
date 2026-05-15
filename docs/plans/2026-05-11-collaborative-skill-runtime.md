@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build Conducere as an MCP server with embedded web UI that lets any coding agent run structured skills collaboratively with multiple browser-based participants.
+**Goal:** Build Joinora as an MCP server with embedded web UI that lets any coding agent run structured skills collaboratively with multiple browser-based participants.
 
 **Architecture:** A FastMCP server exposes 6 tools (create_session, post_message, watch_session, get_session_status, get_catchup_summary, end_session). A FastAPI web UI server runs in a daemon thread sharing the same in-memory session store. Participants interact via WebSocket-connected browser. The agent uses MCP Tasks (watch_session) for async event delivery. A `/draftcircle` Claude Code skill wraps any target skill for collaborative execution.
 
@@ -44,7 +44,7 @@
 
 ### Not modified (kept for backwards compatibility)
 
-The existing `backend/` and `frontend/` directories are untouched. The new `mcp_server/` package is independent. The current Conducere template-driven mode continues to work.
+The existing `backend/` and `frontend/` directories are untouched. The new `mcp_server/` package is independent. The current Joinora template-driven mode continues to work.
 
 ---
 
@@ -881,9 +881,9 @@ def create_mcp_server(
 ) -> FastMCP:
     store = SessionStore(repo_path=repo_path)
     mcp = FastMCP(
-        "Conducere",
+        "Joinora",
         instructions=(
-            "Conducere is a collaborative skill runtime. "
+            "Joinora is a collaborative skill runtime. "
             "Use these tools to run interactive, multi-user sessions "
             "where participants contribute via a shared web UI."
         ),
@@ -991,7 +991,7 @@ def create_mcp_server(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Conducere MCP Server")
+    parser = argparse.ArgumentParser(description="Joinora MCP Server")
     parser.add_argument(
         "--repo-path",
         type=Path,
@@ -1399,13 +1399,13 @@ Create `mcp_server/frontend/index.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conducere</title>
+    <title>Joinora</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <div id="app">
         <header id="header">
-            <h1 id="session-title">Conducere</h1>
+            <h1 id="session-title">Joinora</h1>
             <div id="participants"></div>
         </header>
         <div id="catchup-banner" class="hidden">
@@ -1966,18 +1966,18 @@ Create `skill/draftcircle.md`:
 ````markdown
 ---
 name: draftcircle
-description: Run any skill collaboratively with multiple participants via Conducere. Wraps a target skill for multi-user execution through a shared web UI.
+description: Run any skill collaboratively with multiple participants via Joinora. Wraps a target skill for multi-user execution through a shared web UI.
 ---
 
-# Conducere — Collaborative Skill Execution
+# Joinora — Collaborative Skill Execution
 
-You are running a skill collaboratively via Conducere. Multiple
+You are running a skill collaboratively via Joinora. Multiple
 participants interact through a shared web UI while you execute the
 skill's logic.
 
 ## Setup
 
-1. Call the Conducere MCP tool `create_session` with a descriptive
+1. Call the Joinora MCP tool `create_session` with a descriptive
    title based on the target skill.
 2. Present the session URL to the coordinator:
    > "Share this link with participants: **{session_url}**"
@@ -1986,7 +1986,7 @@ skill's logic.
 
 ## Interaction Rules
 
-**For ALL user-facing communication, use Conducere MCP tools:**
+**For ALL user-facing communication, use Joinora MCP tools:**
 
 - Use `post_message` to communicate with participants. Add metadata:
   - `type`: `"question"` for questions, `"proposal"` for proposed
@@ -1996,7 +1996,7 @@ skill's logic.
 - Use `watch_session` to receive participant responses. This is a
   background task — it returns when participants post messages.
 - **Never use terminal I/O for skill content.** All questions,
-  proposals, and updates go through Conducere.
+  proposals, and updates go through Joinora.
 
 **Processing participant input:**
 
@@ -2028,7 +2028,7 @@ When the skill's workflow is complete:
 
 Follow the instructions below as the skill to execute. Apply all the
 interaction rules above — route all participant communication through
-Conducere MCP tools.
+Joinora MCP tools.
 
 ---
 

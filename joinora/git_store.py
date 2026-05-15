@@ -23,7 +23,7 @@ class GitStore:
 
     def _create_commit(self, message: str) -> str:
         tree_oid = self.repo.index.write_tree()
-        sig = pygit2.Signature("Conducere", "conducere@localhost")
+        sig = pygit2.Signature("Joinora", "joinora@localhost")
         parents = [] if self.repo.head_is_unborn else [self.repo.head.target]
 
         oid = self.repo.create_commit(

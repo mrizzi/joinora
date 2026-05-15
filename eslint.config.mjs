@@ -4,7 +4,7 @@ import globals from "globals";
 export default [
     js.configs.recommended,
     {
-        files: ["conducere/frontend/**/*.js"],
+        files: ["joinora/frontend/**/*.js"],
         languageOptions: {
             ecmaVersion: 2020,
             sourceType: "script",

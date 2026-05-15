@@ -1,17 +1,17 @@
 ---
-name: conducere
-description: Run any skill collaboratively with multiple participants via Conducere. Wraps a target skill for multi-user execution through a shared web UI.
+name: joinora
+description: Run any skill collaboratively with multiple participants via Joinora. Wraps a target skill for multi-user execution through a shared web UI.
 ---
 
-# Conducere — Collaborative Skill Execution
+# Joinora — Collaborative Skill Execution
 
-You are running a skill collaboratively via Conducere. Multiple
+You are running a skill collaboratively via Joinora. Multiple
 participants interact through a shared web UI while you execute the
 skill's logic.
 
 ## Setup
 
-1. Call the Conducere MCP tool `create_session` with a descriptive
+1. Call the Joinora MCP tool `create_session` with a descriptive
    title based on the target skill.
 2. Present the session URL to the coordinator:
    > "Share this link with participants: **{session_url}**"
@@ -20,7 +20,7 @@ skill's logic.
 
 ## Interaction Rules
 
-**For ALL user-facing communication, use Conducere MCP tools:**
+**For ALL user-facing communication, use Joinora MCP tools:**
 
 - Use `post_message` to communicate with participants. Add metadata:
   - `type`: `"question"` for questions, `"proposal"` for proposed
@@ -30,7 +30,7 @@ skill's logic.
 - Use `watch_session` to receive participant responses. This is a
   background task — it returns when participants post messages.
 - **Never use terminal I/O for skill content.** All questions,
-  proposals, and updates go through Conducere.
+  proposals, and updates go through Joinora.
 
 **Processing participant input:**
 
@@ -70,7 +70,7 @@ When the skill's workflow is complete:
 
 Follow the instructions below as the skill to execute. Apply all the
 interaction rules above — route all participant communication through
-Conducere MCP tools.
+Joinora MCP tools.
 
 ---
 

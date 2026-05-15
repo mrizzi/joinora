@@ -7,8 +7,8 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
-from conducere.git_store import GitStore
-from conducere.models import (
+from joinora.git_store import GitStore
+from joinora.models import (
     AgentState,
     Message,
     MessageEvent,

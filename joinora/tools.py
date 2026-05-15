@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from conducere.models import AI_AUTHOR, Session
-from conducere.session_store import SessionStore
+from joinora.models import AI_AUTHOR, Session
+from joinora.session_store import SessionStore
 
 
 def _session_to_wire(

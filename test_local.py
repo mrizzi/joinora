@@ -5,10 +5,10 @@ from pathlib import Path
 
 import uvicorn
 
-from conducere.session_store import SessionStore
-from conducere.web import create_web_app
+from joinora.session_store import SessionStore
+from joinora.web import create_web_app
 
-repo = Path(tempfile.mkdtemp(prefix="conducere-test-"))
+repo = Path(tempfile.mkdtemp(prefix="joinora-test-"))
 store = SessionStore(repo_path=repo)
 
 session, tokens = store.create_session(
